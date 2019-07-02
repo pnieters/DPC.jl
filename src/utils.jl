@@ -1,0 +1,172 @@
+using Distributions, Plots, YAML
+
+export generateRFSpikes, plot_spike_raster, generateEventsFromSpikes, load_yaml
+
+"""
+    generateRFSpikes(trange, input, rfs, λ; group_size=ones(Int,length(rfs)), dt=1e-3, background_rate=0.0)
+
+Generates outputs resembling the activity of multiple homogeneous neuron populations.
+Emits volleys of spikes at a constant rate `λ` and encodes the receptive field responses
+rfs[i](input(t)) to the input at those times in the magnitudes of the volleys.
+"""
+function generateRFSpikes(trange, input, rfs, λ; group_size=ones(Int,length(rfs)), dt=1e-3, background_rate=0.0)
+    T = (trange[end]-trange[1])
+
+    spikes = Vector{Vector{Vector{Float64}}}(undef, length(rfs))
+    for (i,rf) ∈ enumerate(rfs)
+        N = rand(Poisson(λ*T))
+        
+        master_spikes = rand(N) .* T .+ trange[1]
+        
+        p_accept = rf.(input.(master_spikes))
+        
+        spikes[i] = Vector{Vector{Float64}}(undef, group_size[i])
+        for j ∈ 1:group_size[i]
+            background_spikes = rand(rand(Poisson(background_rate*T))) .* T .+ trange[1]
+            spikes[i][j] = sort!([master_spikes[rand(length(master_spikes)) .≤ p_accept] ; background_spikes])
+        end
+    end
+
+    return spikes
+end
+
+
+"""
+    plot_spike_raster(trange, spikes, spike_width; p=plot(), colors=1:sum(length.(spikes)), kwargs...)
+
+Plots spiketrains belonging to several different groups given by `spikes::Vector{Vector{Vector{Float64}}}` with the given `spike_width` over a time interval `trange`.
+Each group is colorcoded by the corresponding element of `colors`.
+"""
+function plot_spike_raster(trange, spikes, spike_width; p=plot(), colors=1:sum(length.(spikes)), kwargs...)
+    plot!(p)
+    k=0
+    for (i,group) ∈ enumerate(spikes)
+        for (j,synapse) ∈ enumerate(group)
+            plot!([Shape([t,t+spike_width,t+spike_width,t],[k-0.5, k-0.5, k+0.5, k+0.5]) for t ∈ synapse], color=colors[i])
+            k-=1
+        end
+    end
+    plot!(; legend=false, grid=false, yticks=false, xlim=trange, ylim=(k-0.5,0.5), kwargs...)
+    return p
+end
+
+"""
+    generateEventsFromSpikes(s, population_names; spike_duration=0.001)
+
+Generates `Event` objects from groups of spiketrains given by `s::Vector{Vector{Vector{Float64}}}`.
+Each event is named by `Symbol("\$(name)\$(sid)")`, where the `name`s are given by `population_names` and `sid` enumerates the spiketrains belonging to one group.
+"""
+function generateEventsFromSpikes(s, population_names; spike_duration=0.001)
+    events = (Event{Float64,K,Symbol} where K)[]
+    for (groupname,group) ∈ zip(population_names,s)
+        for (sid,synapse) ∈ enumerate(group)
+            for spike ∈ synapse
+                push!(events, Event{Float64,:spike_start,Symbol}(spike, Symbol("$(groupname)$(sid)")))
+                push!(events, Event{Float64,:spike_end,Symbol}(spike+spike_duration, Symbol("$(groupname)$(sid)")))
+            end
+        end
+    end
+    sort!(events)
+    return events
+end
+
+
+
+
+
+
+
+function _recursive_parse_branches!(ancestor_id, branch_id, branch_obj)
+    sub_branches = haskey(branch_obj, "branches") && ~isa(branch_obj["branches"],Nothing) && ~isempty(branch_obj["branches"]) ?
+        (_recursive_parse_branches!(branch_id, Symbol(subbranch_id), subbranch_obj) for (subbranch_id, subbranch_obj) ∈ branch_obj["branches"]) : []
+
+    delete!(branch_obj, "branches")
+
+    branch_obj["ancestor"] = ancestor_id
+    branches = merge!(Dict(branch_id=>branch_obj), sub_branches...)
+    return branches
+end
+
+function _load_synapse!(syn_id, syn, synapses; default_release_probability=0.5)
+    synapse = if isa(syn, Dict)
+        transmitter = Symbol(get(syn, "transmitter", "excitatory"))#get(Dict("excitatory"=>:excitatory,"inhibitory"=>:inhibitory,"reward"=>:reward,"punish"=>:punish), lowercase(get(syn, "transmitter", "excitatory")), :excitatory)
+        release_probability = (get(syn, "release_probability", default_release_probability))
+        Synapse(syn_id, Float64(release_probability), false)
+    else
+        Synapse(syn_id, Float64(syn), false)
+    end
+    push!(synapses, synapse)
+end
+
+
+"""
+    load_yaml(::Type{Network}, YAML_source)
+
+Loads a network from a configuration file or string `YAML_source`.
+"""
+function load_yaml(::Type{Network{T}}, YAML_source) where {T}
+    obj = YAML.load(YAML_source)
+    default_spike_duration = (get(obj,"spike_duration",1.0))
+    default_plateau_duration = (get(obj,"plateau_duration",100.0))
+    default_release_probability = (get(obj, "release_probability", 0.5))
+
+    # collect all neurons belonging to the network
+    neurons = Dict{Symbol,Neuron{T}}()
+    for (nid,neuron) ∈ obj["neurons"]
+        neuron_id = NeuronID(Symbol(nid))
+        spike_duration = (get(neuron, "spike_duration", default_spike_duration))
+        plateau_duration = (get(neuron, "plateau_duration", default_plateau_duration))
+        release_probability = (get(neuron, "release_probability", default_release_probability))
+
+        branches = _recursive_parse_branches!(nothing, :soma, neuron["soma"])
+        descendents = Dict{Symbol,Vector{Symbol}}(bid=>Symbol[] for bid ∈ keys(branches))
+
+        # determine each branches' descendents
+        for (bid,branch) ∈ branches
+            if ~isa(branch["ancestor"], Nothing)
+                # "I'm a direct descendent of my closest ancestor"
+                push!(descendents[branch["ancestor"]], bid)
+            end
+        end
+
+        # collect all segments belonging to the neuron
+        segments = Dict{Symbol, Segment}()
+        for (bid,branch) ∈ branches
+            seg_id = SegmentID(neuron_id, Symbol(bid))
+            min_synapses = branch["min_synapses"]
+            min_segments = branch["min_segments"]
+
+            next_upstream = descendents[bid]
+            next_downstream = branch["ancestor"]
+
+            synapses = Dict{Symbol,Vector{Synapse}}()
+            if isa(branch["synapses"], Vector)
+                for syn_id ∈ branch["synapses"]
+                    synapse_id = SynapseID(seg_id, Symbol(syn_id), 1)
+                    synapses[Symbol(syn_id)] = [Synapse(synapse_id, release_probability, false)]
+                end
+            else
+                for (syn_id, syns) ∈ branch["synapses"]
+                    synapses[Symbol(syn_id)] = Synapse[]
+
+                    if isa(syns, Vector)
+                        for (i,syn) ∈ numerate(syns)
+                            synapse_id = SynapseID(seg_id, Symbol(syn_id), i)
+                            _load_synapse!(synapse_id, syn, synapses[Symbol(syn_id)]; default_release_probability=release_probability)
+                        end
+                    else
+                        synapse_id = SynapseID(seg_id, Symbol(syn_id), 1)
+                        _load_synapse!(synapse_id, syns, synapses[Symbol(syn_id)]; default_release_probability=release_probability)
+                    end
+                end
+            end
+
+            segments[bid] = Segment(seg_id, min_synapses, min_segments, false, synapses, next_downstream, next_upstream)
+        end
+
+        (spike_duration, plateau_duration) = promote(spike_duration, plateau_duration)
+        neurons[Symbol(nid)] = Neuron(neuron_id, spike_duration, plateau_duration, segments)
+    end
+
+    return Network(neurons)
+end

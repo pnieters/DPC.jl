@@ -1,0 +1,355 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+    height="55mm"
+    width="65mm"
+    viewBox="0 0 65 55">
+    <path
+    style="
+        opacity:1;
+        fill:#555753;
+        stroke:none;
+        paint-order:markers fill stroke" 
+    d="
+        M 14 20
+        a 4.0,4.0 0 0 0 4.0,4.0 
+        h 6.3 
+        v -3 
+        h -6.3 
+        a 1.0,1.0 0 0 1 -1.0,-1.0 
+        Z"
+/>
+<path
+    style="
+        opacity:1;
+        fill:none;
+        stroke:#000000;
+        stroke-width:0.3;
+        paint-order:markers fill stroke" 
+    d="
+        M 14 20
+        a 4.0,4.0 0 0 0 4.0,4.0 
+        h 6.3 
+        m 0 -3 
+        h -6.3 
+        a 1.0,1.0 0 0 1 -1.0,-1.0 
+        "
+/>
+
+
+<path
+    style="
+        opacity:1;
+        fill:#555753;
+        stroke:none;
+        paint-order:markers fill stroke" 
+    d="
+        M 31 20
+        h 3
+        v 5
+        h -3 
+        a 1.0,1.0 0 0 0 -1.0,-1.0
+        h -6.3
+        v -3
+        h 6.3
+        a 1.0,1.0 0 0 0 1.0,-1.0
+        Z"
+/>
+<path
+    style="
+        opacity:1;
+        fill:none;
+        stroke:#000000;
+        stroke-width:0.3;
+        paint-order:markers fill stroke" 
+    d="
+        M 31 20
+        h 3
+        v 5
+        h -3 
+        a 1.0,1.0 0 0 0 -1.0,-1.0
+        h -6.3
+        m 0 -3
+        h 6.3
+        a 1.0,1.0 0 0 0 1.0,-1.0
+        "
+/>
+
+
+<path
+    style="
+        opacity:1;
+        fill:#555753;
+        stroke:none;
+        paint-order:markers fill stroke" 
+    d="
+        M 34 35
+        h -3
+        v 5
+        h 3 
+        a 1.0,1.0 0 0 1 1.0,-1.0
+        h 6.3
+        v -3
+        h -6.3
+        a 1.0,1.0 0 0 1 -1.0,-1.0
+        Z"
+/>
+<path
+    style="
+        opacity:1;
+        fill:none;
+        stroke:#000000;
+        stroke-width:0.3;
+        paint-order:markers fill stroke" 
+    d="
+        M 34 35
+        h -3
+        v 5
+        h 3 
+        a 1.0,1.0 0 0 1 1.0,-1.0
+        h 6.3
+        m 0 -3
+        h -6.3
+        a 1.0,1.0 0 0 1 -1.0,-1.0
+        "
+/>
+
+
+<path
+    style="
+        opacity:1;
+        fill:#555753;
+        stroke:none;
+        paint-order:markers fill stroke" 
+    d="
+        M 51 35
+        a 4.0,4.0 0 0 1 -4.0,4.0 
+        h -6.3 
+        v -3 
+        h 6.3 
+        a 1.0,1.0 0 0 0 1.0,-1.0 
+        Z"
+/>
+<path
+    style="
+        opacity:1;
+        fill:none;
+        stroke:#000000;
+        stroke-width:0.3;
+        paint-order:markers fill stroke" 
+    d="
+        M 51 35
+        a 4.0,4.0 0 0 1 -4.0,4.0 
+        h -6.3 
+        m 0 -3 
+        h 6.3 
+        a 1.0,1.0 0 0 0 1.0,-1.0 
+        "
+/>
+
+
+<path
+    style="
+        opacity: 1;
+        fill:#babdb6; 
+        stroke:#000000;
+        stroke-width:0.3;
+        paint-order:markers fill stroke" 
+    d=" 
+        M 17 10
+        a 1.5 1.5, 0, 0, 0, -3 0
+        v 10
+        h 3
+        v -10
+        Z
+    "
+
+        height="10" 
+        width="3" 
+    x = "14"
+    y = "10"
+/>
+
+
+<path
+    style="
+        opacity: 1;
+        fill:#babdb6; 
+        stroke:#000000;
+        stroke-width:0.3;
+        paint-order:markers fill stroke" 
+    d=" 
+        M 34 10
+        a 1.5 1.5, 0, 0, 0, -3 0
+        v 10
+        h 3
+        v -10
+        Z
+    "
+
+        height="10" 
+        width="3" 
+    x = "31"
+    y = "10"
+/>
+
+
+<rect
+    height="10" 
+    width="3" 
+    style="
+        opacity: 1;
+        fill:#babdb6; 
+        stroke:#000000;
+        stroke-width:0.3;
+        paint-order:markers fill stroke" 
+
+    x = "31"
+    y = "25"
+/>
+
+
+<path
+    style="
+        opacity: 1;
+        fill:#babdb6; 
+        stroke:#000000;
+        stroke-width:0.3;
+        paint-order:markers fill stroke" 
+    d=" 
+        M 51 25
+        a 1.5 1.5, 0, 0, 0, -3 0
+        v 10
+        h 3
+        v -10
+        Z
+    "
+
+        height="10" 
+        width="3" 
+    x = "48"
+    y = "25"
+/>
+
+
+<path
+    style="
+        opacity:1;
+        fill:#babdb6;
+        stroke:#000000;
+        stroke-width:0.3;
+        paint-order:markers fill stroke"
+
+    d="
+        M 31 40
+        v 1.0 
+        c 0.0,1.0 -3.0,7.45325 -3.0,8.0 0.0,2.0 9.0,2.0 9.0,0.0 0.0,-0.54675 -3.0,-6.90657 -3.0,-8.0
+        v -1.0
+        z"
+/>
+
+
+<text 
+    style="
+        font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6px;
+        font-family:'Bitstream Charter'; font-variant-ligatures:normal; font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;
+        letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;fill:#000000;fill-opacity:1;stroke:none;
+        line-height:1.25;
+        " 
+    x="6.3" 
+    y="15.0"
+    dy="1.5"
+>        
+    <tspan>A</tspan>
+</text>
+
+
+<text 
+    style="
+        font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6px;
+        font-family:'Bitstream Charter'; font-variant-ligatures:normal; font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;
+        letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;fill:#000000;fill-opacity:1;stroke:none;
+        line-height:1.25;
+        " 
+    x="23.3" 
+    y="15.0"
+    dy="1.5"
+>        
+    <tspan>B</tspan>
+</text>
+
+
+<text 
+    style="
+        font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6px;
+        font-family:'Bitstream Charter'; font-variant-ligatures:normal; font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;
+        letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;fill:#555753;fill-opacity:1;stroke:none;
+        line-height:1.25;
+        " 
+    x="34.7" 
+    y="22.5"
+    dy="1.5"
+>        
+    <tspan>2</tspan>
+</text>
+
+
+<text 
+    style="
+        font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6px;
+        font-family:'Bitstream Charter'; font-variant-ligatures:normal; font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;
+        letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;fill:#000000;fill-opacity:1;stroke:none;
+        line-height:1.25;
+        " 
+    x="23.3" 
+    y="30.0"
+    dy="1.5"
+>        
+    <tspan>C</tspan>
+</text>
+
+
+<text 
+    style="
+        font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6px;
+        font-family:'Bitstream Charter'; font-variant-ligatures:normal; font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;
+        letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;fill:#000000;fill-opacity:1;stroke:none;
+        line-height:1.25;
+        " 
+    x="40.3" 
+    y="30.0"
+    dy="1.5"
+>        
+    <tspan>D</tspan>
+</text>
+
+
+<text 
+    style="
+        font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6px;
+        font-family:'Bitstream Charter'; font-variant-ligatures:normal; font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;
+        letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;fill:#555753;fill-opacity:1;stroke:none;
+        line-height:1.25;
+        " 
+    x="51.7" 
+    y="37.5"
+    dy="1.5"
+>        
+    <tspan>1</tspan>
+</text>
+
+
+<text 
+    style="
+        font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6px;
+        font-family:'Bitstream Charter'; font-variant-ligatures:normal; font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;
+        letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;fill:#000000;fill-opacity:1;stroke:none;
+        line-height:1.25;
+        " 
+    x="23.3" 
+    y="45.0"
+    dy="1.5"
+>        
+    <tspan>E</tspan>
+</text>
+
+
+</svg>
