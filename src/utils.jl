@@ -1,6 +1,6 @@
 using Distributions, Plots, YAML
 
-export generateRFSpikes, plot_spike_raster, generateEventsFromSpikes, load_yaml
+export generateRFSpikes, plot_spike_raster, generateEventsFromSpikes, load_yaml, save_yaml
 
 """
     generateRFSpikes(trange, input, rfs, λ; group_size=ones(Int,length(rfs)), dt=1e-3, background_rate=0.0)
@@ -104,8 +104,14 @@ end
 
 Loads a network from a configuration file or string `YAML_source`.
 """
-function load_yaml(::Type{Network{T}}, YAML_source) where {T}
-    obj = YAML.load(YAML_source)
+function load_yaml(::Type{Network{T,Q}}, YAML_file=nothing; YAML_source=nothing) where {T,Q}
+    @assert (YAML_file === nothing) ⊻ (YAML_source === nothing) "Must provide exactly one of `YAML_file` or `YAML_source` "
+    obj = if YAML_file != nothing
+        YAML.load_file(YAML_file)
+    else
+        YAML.load(YAML_source)
+    end
+
     default_spike_duration = (get(obj,"spike_duration",1.0))
     default_plateau_duration = (get(obj,"plateau_duration",100.0))
     default_release_probability = (get(obj, "release_probability", 0.5))
@@ -150,7 +156,7 @@ function load_yaml(::Type{Network{T}}, YAML_source) where {T}
                     synapses[Symbol(syn_id)] = Synapse[]
 
                     if isa(syns, Vector)
-                        for (i,syn) ∈ numerate(syns)
+                        for (i,syn) ∈ enumerate(syns)
                             synapse_id = SynapseID(seg_id, Symbol(syn_id), i)
                             _load_synapse!(synapse_id, syn, synapses[Symbol(syn_id)]; default_release_probability=release_probability)
                         end
@@ -168,5 +174,63 @@ function load_yaml(::Type{Network{T}}, YAML_source) where {T}
         neurons[Symbol(nid)] = Neuron(neuron_id, spike_duration, plateau_duration, segments)
     end
 
-    return Network(neurons)
+    delete!(obj, "neurons")
+
+    return Network(neurons, Dict{Symbol,Q}(Symbol(key)=>convert(Q,value) for (key,value) ∈ pairs(obj)))
+end
+
+"""
+    save_yaml(::Type{Network}, filename=nothing)
+
+Saves a network to a configuration file or string, if no filename is given.
+"""
+function save_yaml(net::Network, filename=nothing)
+
+    neurons = Dict{Symbol,Dict}()
+    for (nid,neuron) ∈ net.neurons
+        
+        # parse all segments
+        segments = Dict{Symbol,Dict}()
+        for (segid,segment) ∈ neuron.segments
+
+            synapse_groups = Dict{Symbol,Vector}()
+            for (synid,synapse_group) ∈ segment.synapses
+                synapses = Vector{Dict}()
+                for synapse ∈ synapse_group
+                    push!(synapses, Dict(
+                        :release_probability => synapse.p
+                    ))
+                end
+                synapse_groups[synid] = synapses
+            end
+
+            segments[segid] = Dict(
+                :min_synapses => segment.θ_syn,
+                :min_segments => segment.θ_seg,
+                :synapses => synapse_groups,
+                :branches => Dict{Symbol,Dict}()
+            )
+        end
+
+        function _nest_recursive(segid, segments)
+            seg = segments[segid]
+            seg[:branches] = Dict(bid => _nest_recursive(bid, segments) for bid ∈ neuron.segments[segid].next_upstream)
+            return seg
+        end
+
+        neurons[nid] = Dict(
+            :spike_duration => neuron.spike_duration, 
+            :plateau_duration => neuron.plateau_duration,
+            :soma => _nest_recursive(:soma, segments)
+        )
+    end
+
+    network = deepcopy(net.metainfo)
+    network[:neurons] = neurons
+
+    return if filename === nothing
+        YAML.write(network)
+    else
+        YAML.write_file(filename, network)
+    end
 end

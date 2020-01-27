@@ -60,11 +60,12 @@ struct Neuron{T}
 end
 
 # a network is a collection of neurons and allows for convenient indexing of objects by ID
-struct Network{T}
+struct Network{T,Q}
     neurons::Dict{Symbol,Neuron{T}}
+    metainfo::Dict{Symbol,Q}
 end
 ####################################
-
+Network(neurons) = Network(neurons,Dict{Symbol,Any})
 
 #####################################
 # Methods to retrieve objects by id #
