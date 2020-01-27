@@ -2,7 +2,6 @@ plateau_duration: 0.1
 spike_duration: 0.005
 neurons:
     simple: 
-        release_probability: 0.0
         soma:
             min_synapses: 5
             min_segments: 0

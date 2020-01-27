@@ -129,28 +129,30 @@ end
 
 
 
-function simulate!(sim_state, inputs; log=Dict{Symbol,Any}(), show_progress=true, T=Float64) where V
+function simulate!(sim_state, inputs; log=Dict{Symbol,Any}(), filter_events=ev->true, show_progress=true, T=Float64) where V
     event_queue = BinaryMinHeap(convert(Vector{Event{T}},inputs))
 
     # attach logging callback to signals tagged for logging
     logged_signal_names = keys(log)
     get_logged_signals(sim_state) = [sim_state[prop] for prop ∈ values(log)]
     
-    log_data = DataFrame(:t=>Float64[],Base.:(=>).(logged_signal_names, [typeof(v)[] for v ∈ get_logged_signals(sim_state)])...)
+    log_data = DataFrame(:t=>Float64[], :event=>Event[], Base.:(=>).(logged_signal_names, [typeof(v)[] for v ∈ get_logged_signals(sim_state)])...)
     
     p=nothing
     if show_progress
-        p = Progress(100, 0.0)
+        p = ProgressThresh(0)
     end
     
     while ~isempty(event_queue)
         if show_progress
-            update!(p, Int(fld(100*length(log_data),(length(log_data)+length(event_queue)))))
+            ProgressMeter.update!(p, length(event_queue))
         end
         next_event! = pop!(event_queue)
         next_event!(sim_state, event_queue)
         
-        push!(log_data, [next_event!.t; get_logged_signals(sim_state)...])
+        if filter_events(next_event!)
+            push!(log_data, [next_event!.t, next_event!, get_logged_signals(sim_state)...])
+        end
     end
 
     return log_data

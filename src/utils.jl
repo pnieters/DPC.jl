@@ -104,7 +104,7 @@ end
 
 Loads a network from a configuration file or string `YAML_source`.
 """
-function load_yaml(::Type{Network{T,Q}}, YAML_file=nothing; YAML_source=nothing) where {T,Q}
+function load_yaml(::Type{Network{T}}, YAML_file=nothing; YAML_source=nothing) where {T}
     @assert (YAML_file === nothing) ⊻ (YAML_source === nothing) "Must provide exactly one of `YAML_file` or `YAML_source` "
     obj = if YAML_file != nothing
         YAML.load_file(YAML_file)
@@ -176,7 +176,7 @@ function load_yaml(::Type{Network{T,Q}}, YAML_file=nothing; YAML_source=nothing)
 
     delete!(obj, "neurons")
 
-    return Network(neurons, Dict{Symbol,Q}(Symbol(key)=>convert(Q,value) for (key,value) ∈ pairs(obj)))
+    return (network=Network(neurons), metainfo=Dict(Symbol(key)=>value for (key,value) ∈ pairs(obj)))
 end
 
 """
@@ -184,7 +184,7 @@ end
 
 Saves a network to a configuration file or string, if no filename is given.
 """
-function save_yaml(net::Network, filename=nothing)
+function save_yaml(net::Network, filename=nothing, metainfo=Dict{Symbol,Any}())
 
     neurons = Dict{Symbol,Dict}()
     for (nid,neuron) ∈ net.neurons
@@ -225,12 +225,12 @@ function save_yaml(net::Network, filename=nothing)
         )
     end
 
-    network = deepcopy(net.metainfo)
-    network[:neurons] = neurons
+    data = deepcopy(metainfo)
+    data[:neurons] = neurons
 
     return if filename === nothing
-        YAML.write(network)
+        YAML.write(data)
     else
-        YAML.write_file(filename, network)
+        YAML.write_file(filename, data)
     end
 end

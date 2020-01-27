@@ -66,7 +66,7 @@ function (g::Gabor)(relative_position)
     return scale*cos(π*offset)
 end
 
-function configure_rfs!(net, configuration=net.metainfo[:configuration])
+function configure_rfs!(net, configuration)
     for (nid,neuron_cfg) ∈ configuration
         nid=Symbol(nid)
         neuron = net.neurons[nid]
@@ -111,23 +111,26 @@ ganglion_rf = bipolar_weight*bipolar_rf - horizontal_weight*horizontal_rf
 ganglion_rf ./= LinearAlgebra.norm(ganglion_rf)
 
 # # parse video input
-# io = VideoIO.testvideo("annie_oakley")
-# center_spikes, surround_spikes, processed_frames, dims = video_to_spikes(io, ganglion_rf)
+io = VideoIO.testvideo("annie_oakley")
+center_spikes, surround_spikes, processed_frames, dims = video_to_spikes(io, ganglion_rf)
 
 # # write processed video
-# props = [:priv_data => ("crf"=>"22","preset"=>"medium")]
-# encodevideo("video.mp4",processed_frames,framerate=24,AVCodecContextProperties=props)
+props = [:priv_data => ("crf"=>"22","preset"=>"medium")]
+encodevideo("video.mp4",processed_frames,framerate=24,AVCodecContextProperties=props)
 
 # # convert spikes to events for simulation
-# spike_events = generateEventsFromSpikes([center_spikes,surround_spikes], [:on, :off])
-dims = 21,21
+input_spike_events = generateEventsFromSpikes([center_spikes,surround_spikes], [:on, :off])
 
 # assign a location to each RGC receptive field
 retinotopic_positions = Dict(Symbol("$(onoff)$(id)") => collect(Tuple(c) .-(dims .+1)./2) for onoff ∈ (:on,:off) for (id,c) ∈ enumerate(CartesianIndices((1:dims[1],1:dims[2]))))
 
 # load network template
-net = load_yaml(Network{Float64, Any}, "examples/receptive_fields/cfg/template_simple.yaml")
+net,metainfo = load_yaml(Network{Float64}, "examples/receptive_fields/cfg/template_simple.yaml")
+configuration = metainfo[:configuration]
+
 # fill network configuration with life given the metainformation
-configure_rfs!(net)
+configure_rfs!(net, configuration)
 # store instantiated network
 save_yaml(net, "examples/receptive_fields/cfg/full_models/simple.yaml")
+
+log_data=simulate!(net, input_spike_events; filter_events=ev->isa(ev, Event{T, :spike_start, V} where {T,V}) && ev.value==:simple, show_progress=true)
