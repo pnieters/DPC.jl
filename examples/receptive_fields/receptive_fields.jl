@@ -1,57 +1,97 @@
-using ADSP, Distributions, VideoIO, ImageFiltering, ProgressMeter, Plots
-import LinearAlgebra
+using ADSP, Distributions, DataFrames, VideoIO, ImageFiltering, ProgressMeter, Plots
+import LinearAlgebra, ColorTypes
 
-function video_to_spikes(io, ganglion_rf)
-    processed_frames = []
+
+function load_video(io)
+    vid = VideoIO.openvideo(io)
+    
+    df = DataFrame(timestamp=Float64[], frame=Matrix{<:Gray}[])
+    while !eof(vid)
+        # get time of the frame
+        # read frame and convert to grayscale
+        frame = ColorTypes.Gray.(read(vid))
+        t = gettime(vid)
+        push!(df, (t, frame))
+    end
+    df.timestamp .+= mean(diff(df.timestamp))
+  
+    close(vid)
+    return df
+end
+
+
+
+function frames_to_spikes(df, ganglion_rf)
+    @assert size(df,1) > 0 "`df` must not be empty!"
+    dims = size(df[1,:frame])
+
+    frame_durations = diff([0.0; df[:timestamp]])
     
     # Utility function to draw a Poisson-spike-train within the current frame interval [a,b]
     # according to the neuron-specific firing rates
     draw_spikes(rate, (a,b)) = rand(Uniform(a,b), rand(Poisson(max(0,rate*firing_rate_scale * (b-a)))))
-    
-    meta_info = unsafe_load(io.apFormatContext[1])
-    duration = VideoIO.get_duration(meta_info)
-    
-    # parse the video
-    vid=VideoIO.openvideo(io)
-    fps = vid.framerate
-    dims = vid.height,vid.width
+
     center_spikes = [Float64[] for i ∈ 1:prod(dims)]
     surround_spikes = [Float64[] for i ∈ 1:prod(dims)]
-    prog = Progress(Int(round(duration*fps)), 0.5, "Processing: ")
-    let t=0.0, t′=0.0
-        while !eof(vid)
-            t = gettime(vid)
-            next!(prog, showvalues=[("current time", t), ("video duration", duration)])
-            # update time-interval of current frame
-            t′=t+1.0/fps
 
-            # read raw frame and convert it to grayscale
-            frame = RGB.(read(vid))
-
-            # filter the image to approximate retinal ganglion cell inputs
-            ganglion_input = imfilter(Gray.(frame), ganglion_rf)
-
-            # For each receptive field location...
-            for (i,inp) ∈ enumerate(ganglion_input)
-                # ... generate spikes for center- and surround-cells
-                new_center_spikes = draw_spikes(inp, (t,t′))
-                new_surround_spikes = draw_spikes(-inp, (t,t′))
-                append!(center_spikes[i],new_center_spikes)
-                append!(surround_spikes[i],new_surround_spikes)
-                
-                # ... draw spikes in the video frame
-                α_g = 0.5^length(new_center_spikes)
-                α_r = 0.5^length(new_surround_spikes)
-                frame[i] = RGB(1.0-α_r + α_r*frame[i].r, 1.0-α_g+α_g*frame[i].g, frame[i].b)
-            end
-
-            # store the annotated video frame
-            push!(processed_frames, RGB{ColorTypes.N0f8}.(frame))
+    for (t1,t2,f) ∈ zip([0.0; df.timestamp[1:end-1]], df.timestamp, df.frame)
+        # For each receptive field location...
+        for (i,inp) ∈ enumerate(imfilter(f, ganglion_rf))
+            new_center_spikes = draw_spikes(inp, (t1,t2))
+            new_surround_spikes = draw_spikes(-inp, (t1,t2))
+            # ... generate spikes for center- and surround-cells
+            append!(center_spikes[i],new_center_spikes)
+            append!(surround_spikes[i],new_surround_spikes)
         end
     end
-    close(vid)
     
-    return (center_spikes=center_spikes, surround_spikes=surround_spikes, processed_frames=processed_frames, dims=dims)
+    return (center_spikes=center_spikes, surround_spikes=surround_spikes)
+end
+
+
+function sta(vid, duration, rf_region::Tuple{UnitRange{Int},UnitRange{Int}}, spikes::Vector{Tuple{Tuple{Int,Int}, Float64}})
+    (y_rng,x_rng) = rf_region
+    
+    # parse the video
+    fps = vid.framerate
+    dims = vid.height,vid.width
+
+    num_frames = Int(ceil(fps*duration))
+    mean_frames = [zeros(Float64,length(y_rng),length(x_rng)) for i ∈ 1:num_frames]
+    
+    spike_counts = 0
+    seekstart(vid)
+    read(vid)
+    for ((y,x),t) ∈ spikes
+        if t < duration + 0.1
+            continue
+        end
+
+        frames = []
+        seek(vid, t-duration-0.1)
+        t0=gettime(vid)
+        while gettime(vid) <= t
+            print("$(t) ")
+            push!(frames, Gray.(read(vid))[y .+ y_rng, x .+ x_rng])
+        end
+        println("From $(t0) (desired: $(t-duration-0.1)) to $(gettime(vid)) (desired: $(t))")
+        
+        if length(frames) < num_frames
+            println("Not enough frames ($(length(frames)) instead of $(num_frames))")
+            continue
+        else
+            for (i,frame) ∈ enumerate(frames[end-num_frames+1:end])
+                mean_frames[i] .+= frame
+            end
+            spike_counts += 1
+        end
+    end
+
+    for i ∈ 1:num_frames
+        mean_frames[i] ./= spike_counts
+    end
+
+    return mean_frames
 end
 
 struct Gabor
@@ -97,7 +137,7 @@ function configure_rfs!(net, configuration)
     return net
 end
 
-firing_rate_scale = 20.0
+firing_rate_scale = 200.0
 
 #= Set up receptive fields =#
 bipolar_weight, horizontal_weight = 1,1
@@ -111,16 +151,24 @@ ganglion_rf = bipolar_weight*bipolar_rf - horizontal_weight*horizontal_rf
 ganglion_rf ./= LinearAlgebra.norm(ganglion_rf)
 
 # # parse video input
+println("Parsing video...")
 io = VideoIO.testvideo("annie_oakley")
-center_spikes, surround_spikes, processed_frames, dims = video_to_spikes(io, ganglion_rf)
+
+df = load_video(io);
+center_spikes, surround_spikes = frames_to_spikes(df, ganglion_rf)
+#=
+vid = VideoIO.openvideo(io)
+center_spikes, surround_spikes, processed_frames, dims = video_to_spikes(vid, ganglion_rf)
 
 # # write processed video
-props = [:priv_data => ("crf"=>"22","preset"=>"medium")]
-encodevideo("video.mp4",processed_frames,framerate=24,AVCodecContextProperties=props)
+# props = [:priv_data => ("crf"=>"22","preset"=>"medium")]
+# encodevideo("video.mp4",processed_frames,framerate=24,AVCodecContextProperties=props)
 
+println("Collecting spikes...")
 # # convert spikes to events for simulation
 input_spike_events = generateEventsFromSpikes([center_spikes,surround_spikes], [:on, :off])
 
+println("Setting up neurons...")
 # assign a location to each RGC receptive field
 retinotopic_positions = Dict(Symbol("$(onoff)$(id)") => collect(Tuple(c) .-(dims .+1)./2) for onoff ∈ (:on,:off) for (id,c) ∈ enumerate(CartesianIndices((1:dims[1],1:dims[2]))))
 
@@ -133,4 +181,8 @@ configure_rfs!(net, configuration)
 # store instantiated network
 save_yaml(net, "examples/receptive_fields/cfg/full_models/simple.yaml")
 
+println("Running simulation...")
 log_data=simulate!(net, input_spike_events; filter_events=ev->isa(ev, Event{T, :spike_start, V} where {T,V}) && ev.value==:simple, show_progress=true)
+
+println("Estimating receptive fields...")
+# close(vid)

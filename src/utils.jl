@@ -57,23 +57,17 @@ Generates `Event` objects from groups of spiketrains given by `s::Vector{Vector{
 Each event is named by `Symbol("\$(name)\$(sid)")`, where the `name`s are given by `population_names` and `sid` enumerates the spiketrains belonging to one group.
 """
 function generateEventsFromSpikes(s, population_names; spike_duration=0.001)
-    events = (Event{Float64,K,Symbol} where K)[]
-    for (groupname,group) ∈ zip(population_names,s)
+    events = [
+        Event{Float64,ev_type,Symbol}(ev_time, Symbol("$(groupname)$(sid)"))
+        for (groupname,group) ∈ zip(population_names,s)
         for (sid,synapse) ∈ enumerate(group)
-            for spike ∈ synapse
-                push!(events, Event{Float64,:spike_start,Symbol}(spike, Symbol("$(groupname)$(sid)")))
-                push!(events, Event{Float64,:spike_end,Symbol}(spike+spike_duration, Symbol("$(groupname)$(sid)")))
-            end
-        end
-    end
+        for spike ∈ synapse
+        for (ev_type,ev_time) ∈ ((:spike_start,spike),(:spike_end,spike+spike_duration))
+    ]
+
     sort!(events)
     return events
 end
-
-
-
-
-
 
 
 function _recursive_parse_branches!(ancestor_id, branch_id, branch_obj)
