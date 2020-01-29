@@ -8,7 +8,7 @@ end
 (get_time_indices(v::VideoBuffer{T,C}, (t1,t2)::Tuple{T,T}) where {T,C}) = searchsortedlast(v.timestamps, t1):searchsortedfirst(v.timestamps, t2)
 get_time_indices(v,ts)=ts
 Base.getindex(v::VideoBuffer, t_range, y_range, x_range) = v.frames[get_time_indices(v, t_range), y_range, x_range]
-
+Base.checkbounds(::Type{Bool}, v::VideoBuffer, t_range, y_range, x_range) = checkbounds(Bool,v.frames, get_time_indices(v, t_range), y_range, x_range)
 
 """
     load_video(io::VideoIO.AVInput; c=ColorTypes.Gray)
@@ -36,6 +36,12 @@ function load_video(io::VideoIO.AVInput; c=ColorTypes.Gray)
     return buff
 end
 
+
+"""
+    frames_to_spikes(buff, ganglion_rf)
+
+Applies a receptive field to each individual frame of a VideoBuffer and converts the result into a Poisson spike-train.
+"""
 function frames_to_spikes(buff, ganglion_rf)
     @assert size(buff.frames,1) > 0 "`df` must not be empty!"
     dims = size(buff.frames)[2:3]
@@ -64,49 +70,30 @@ function frames_to_spikes(buff, ganglion_rf)
 end
 
 
-function sta(vid, duration, rf_region::Tuple{UnitRange{Int},UnitRange{Int}}, spikes::Vector{Tuple{Tuple{Int,Int}, Float64}})
-    (y_rng,x_rng) = rf_region
-    
-    # parse the video
-    fps = vid.framerate
-    dims = vid.height,vid.width
+"""
+    sta(buff, spikes::Vector{Tuple{Tuple{Int,Int}, Float64}}, slice)
 
-    num_frames = Int(ceil(fps*duration))
-    mean_frames = [zeros(Float64,length(y_rng),length(x_rng)) for i ∈ 1:num_frames]
-    
-    spike_counts = 0
-    seekstart(vid)
-    read(vid)
+Calculate the spike-triggered average for a `slice` (t_slice,y_slice,x_slice) in time and space
+over all `spikes` (tuples ((y,x),t) of  positions `(y,x)` and times `t`).
+"""
+function calculate_sta(buff::VideoBuffer{T,C}, spikes, (t_slice,y_slice,x_slice)) where {T,C}
+    sta = zeros(length(t_slice), length(y_slice), length(x_slice))
+
+    c = 0
     for ((y,x),t) ∈ spikes
-        if t < duration + 0.1
-            continue
-        end
-
-        frames = []
-        seek(vid, t-duration-0.1)
-        t0=gettime(vid)
-        while gettime(vid) <= t
-            print("$(t) ")
-            push!(frames, Gray.(read(vid))[y .+ y_rng, x .+ x_rng])
-        end
-        println("From $(t0) (desired: $(t-duration-0.1)) to $(gettime(vid)) (desired: $(t))")
-        
-        if length(frames) < num_frames
-            println("Not enough frames ($(length(frames)) instead of $(num_frames))")
-            continue
+        t0 = searchsortedfirst(buff.timestamps, t)
+        if checkbounds(Bool, buff, t_slice.+t0, y_slice.+y, x_slice.+x)
+            c += 1
         else
-            for (i,frame) ∈ enumerate(frames[end-num_frames+1:end])
-                mean_frames[i] .+= frame
-            end
-            spike_counts += 1
+            continue
         end
+
+        sta .+= buff[t_slice.+t0, y_slice.+y, x_slice.+x]
     end
 
-    for i ∈ 1:num_frames
-        mean_frames[i] ./= spike_counts
-    end
+    sta ./= c
 
-    return mean_frames
+    return sta
 end
 
 struct Gabor
@@ -117,9 +104,10 @@ end
 
 function (g::Gabor)(relative_position)
     scale = exp(-sum(relative_position.^2)/(2*g.aperture^2))
-    offset = g.grating' * relative_position + g.phase
+    offset = 1.0/g.aperture * g.grating' * relative_position + g.phase
     return scale*cos(π*offset)
 end
+(g::Gabor)(dy,dx) = g([dy,dx])
 
 function configure_rfs!(net, configuration)
     for (nid,neuron_cfg) ∈ configuration
@@ -156,7 +144,7 @@ firing_rate_scale = 200.0
 
 #= Set up receptive fields =#
 bipolar_weight, horizontal_weight = 1,1
-bipolar_width, horizontal_width = 2,4
+bipolar_width, horizontal_width = 1,2
 # narrow ON-center receptive field
 bipolar_rf = Kernel.gaussian((bipolar_width,bipolar_width),(horizontal_width,horizontal_width).*4 .+1)
 # wider OFF-center receptive field
@@ -165,32 +153,33 @@ horizontal_rf = Kernel.gaussian((horizontal_width,horizontal_width),(horizontal_
 ganglion_rf = bipolar_weight*bipolar_rf - horizontal_weight*horizontal_rf
 ganglion_rf ./= LinearAlgebra.norm(ganglion_rf)
 
+
 # # parse video input
 println("Parsing video...")
 io = VideoIO.testvideo("annie_oakley")
 
 buff = load_video(io);
 center_spikes, surround_spikes = frames_to_spikes(buff, ganglion_rf)
-
-#=
-vid = VideoIO.openvideo(io)
-center_spikes, surround_spikes, processed_frames, dims = video_to_spikes(vid, ganglion_rf)
-
-# # write processed video
-# props = [:priv_data => ("crf"=>"22","preset"=>"medium")]
-# encodevideo("video.mp4",processed_frames,framerate=24,AVCodecContextProperties=props)
+# assign a location to each RGC receptive field
+dims = size(buff.frames)[2:3]
+retinotopic_positions = Dict(Symbol("$(onoff)$(id)") => collect(Tuple(c) .-(dims .+1)./2) for onoff ∈ (:on,:off) for (id,c) ∈ enumerate(CartesianIndices((1:dims[1],1:dims[2]))))
+pixel_positions = Dict(Symbol("$(onoff)$(id)") => Tuple(c) for onoff ∈ (:on,:off) for (id,c) ∈ enumerate(CartesianIndices((1:dims[1],1:dims[2]))))
 
 println("Collecting spikes...")
 # # convert spikes to events for simulation
 input_spike_events = generateEventsFromSpikes([center_spikes,surround_spikes], [:on, :off])
 
 println("Setting up neurons...")
-# assign a location to each RGC receptive field
-retinotopic_positions = Dict(Symbol("$(onoff)$(id)") => collect(Tuple(c) .-(dims .+1)./2) for onoff ∈ (:on,:off) for (id,c) ∈ enumerate(CartesianIndices((1:dims[1],1:dims[2]))))
-
 # load network template
 net,metainfo = load_yaml(Network{Float64}, "examples/receptive_fields/cfg/template_simple.yaml")
 configuration = metainfo[:configuration]
+for (key,value) ∈ pairs(configuration)
+    key = Symbol(key)
+    value = value["soma"]["location"]
+    retinotopic_positions[key] = value
+    pixel_positions[key] = Int.(ceil.(Tuple(value) .+ (dims .+1)./2))
+end
+
 
 # fill network configuration with life given the metainformation
 configure_rfs!(net, configuration)
@@ -201,5 +190,17 @@ println("Running simulation...")
 log_data=simulate!(net, input_spike_events; filter_events=ev->isa(ev, Event{T, :spike_start, V} where {T,V}) && ev.value==:simple, show_progress=true)
 
 println("Estimating receptive fields...")
-# close(vid)
-=#
+
+# collect all spikes and locations of RGCs
+on_center_spikes_locations = [(pixel_positions[ev.value],ev.t) for ev ∈ filter(ev->isa(ev, Event{T, :spike_start, V} where {T,V}) && startswith(String(ev.value),"on"), input_spike_events)]
+off_center_spikes_locations = [(pixel_positions[ev.value],ev.t) for ev ∈ filter(ev->isa(ev, Event{T, :spike_start, V} where {T,V}) && startswith(String(ev.value),"off"), input_spike_events)]
+# collect all spikes and locations of simple cells
+simple_cell_spikes_locations = [(pixel_positions[ev.value],ev.t) for ev ∈ log_data.event]
+
+sta_range = (-4:0, -5:5,-5:5)
+# Calculate STA of all on-center RGCs
+on_center_sta = calculate_sta(buff, on_center_spikes_locations, sta_range)
+off_center_sta = calculate_sta(buff, off_center_spikes_locations, sta_range)
+# Calculate STA of simple cells
+simple_cell_sta = calculate_sta(buff, simple_cell_spikes_locations, sta_range)
+

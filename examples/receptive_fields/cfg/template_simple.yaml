@@ -13,5 +13,5 @@ configuration:
         soma:
             location: [0.0, 0.0]
             orientation: 0.125
-            aperture: 1.0
+            aperture: 2.0
             phase: 0.0
