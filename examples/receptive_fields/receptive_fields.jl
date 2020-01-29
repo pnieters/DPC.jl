@@ -1,31 +1,46 @@
 using ADSP, Distributions, DataFrames, VideoIO, ImageFiltering, ProgressMeter, Plots
 import LinearAlgebra, ColorTypes
 
+struct VideoBuffer{T,C}
+    timestamps::Vector{T}
+    frames::Array{C,3}
+end
+(get_time_indices(v::VideoBuffer{T,C}, (t1,t2)::Tuple{T,T}) where {T,C}) = searchsortedlast(v.timestamps, t1):searchsortedfirst(v.timestamps, t2)
+get_time_indices(v,ts)=ts
+Base.getindex(v::VideoBuffer, t_range, y_range, x_range) = v.frames[get_time_indices(v, t_range), y_range, x_range]
 
-function load_video(io)
+
+"""
+    load_video(io::VideoIO.AVInput; c=ColorTypes.Gray)
+
+Opens a video and converts all frames into a datafame with columns `timestamp` (end-time of the frames in seconds) and `frame` (2D-Array holding the frame data converted to color type `c`).
+"""
+function load_video(io::VideoIO.AVInput; c=ColorTypes.Gray)
     vid = VideoIO.openvideo(io)
-    
-    df = DataFrame(timestamp=Float64[], frame=Matrix{<:Gray}[])
+
+    timestamps = Float64[]
+    frames = []
+
     while !eof(vid)
-        # get time of the frame
-        # read frame and convert to grayscale
-        frame = ColorTypes.Gray.(read(vid))
+        # get time of the frame, read frame and convert to correct color type
+        frame = c.(read(vid))
         t = gettime(vid)
-        push!(df, (t, frame))
+        push!(frames, reshape(frame, (1,size(frame)...)))
+        push!(timestamps, t)
     end
-    df.timestamp .+= mean(diff(df.timestamp))
+
+    buff = VideoBuffer(timestamps, cat(frames...; dims=1))
+    buff.timestamps .+= mean(diff(buff.timestamps))
   
     close(vid)
-    return df
+    return buff
 end
 
+function frames_to_spikes(buff, ganglion_rf)
+    @assert size(buff.frames,1) > 0 "`df` must not be empty!"
+    dims = size(buff.frames)[2:3]
 
-
-function frames_to_spikes(df, ganglion_rf)
-    @assert size(df,1) > 0 "`df` must not be empty!"
-    dims = size(df[1,:frame])
-
-    frame_durations = diff([0.0; df[:timestamp]])
+    frame_durations = diff([0.0; buff.timestamps])
     
     # Utility function to draw a Poisson-spike-train within the current frame interval [a,b]
     # according to the neuron-specific firing rates
@@ -34,14 +49,14 @@ function frames_to_spikes(df, ganglion_rf)
     center_spikes = [Float64[] for i ∈ 1:prod(dims)]
     surround_spikes = [Float64[] for i ∈ 1:prod(dims)]
 
-    for (t1,t2,f) ∈ zip([0.0; df.timestamp[1:end-1]], df.timestamp, df.frame)
+    for (i,(t1,t2)) ∈ enumerate(zip([0.0; buff.timestamps[1:end-1]], buff.timestamps))
         # For each receptive field location...
-        for (i,inp) ∈ enumerate(imfilter(f, ganglion_rf))
+        for (j,inp) ∈ enumerate(imfilter(buff[i,:,:], ganglion_rf))
             new_center_spikes = draw_spikes(inp, (t1,t2))
             new_surround_spikes = draw_spikes(-inp, (t1,t2))
             # ... generate spikes for center- and surround-cells
-            append!(center_spikes[i],new_center_spikes)
-            append!(surround_spikes[i],new_surround_spikes)
+            append!(center_spikes[j],new_center_spikes)
+            append!(surround_spikes[j],new_surround_spikes)
         end
     end
     
@@ -154,8 +169,9 @@ ganglion_rf ./= LinearAlgebra.norm(ganglion_rf)
 println("Parsing video...")
 io = VideoIO.testvideo("annie_oakley")
 
-df = load_video(io);
-center_spikes, surround_spikes = frames_to_spikes(df, ganglion_rf)
+buff = load_video(io);
+center_spikes, surround_spikes = frames_to_spikes(buff, ganglion_rf)
+
 #=
 vid = VideoIO.openvideo(io)
 center_spikes, surround_spikes, processed_frames, dims = video_to_spikes(vid, ganglion_rf)
@@ -186,3 +202,4 @@ log_data=simulate!(net, input_spike_events; filter_events=ev->isa(ev, Event{T, :
 
 println("Estimating receptive fields...")
 # close(vid)
+=#
