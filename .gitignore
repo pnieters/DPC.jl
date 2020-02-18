@@ -3,6 +3,6 @@
 *.jl.mem
 deps/deps.jl
 sequence.gif
-.data/*
+.data/
 *.h5
 Manifest.toml
