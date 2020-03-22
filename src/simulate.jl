@@ -116,12 +116,18 @@ Update the neuron's state, potentially triggering a plateau potential.
 function update!(neuron::Neuron{T}, t, queue) where {T}
     for (seg_id, segment) ∈ neuron.segments
         if ~segment.active && is_superthreshold(neuron, segment)
-            push!(queue, Event{T,:plateau_start,SegmentID}(t, segment.id))
-            push!(queue, Event{T,:plateau_end,SegmentID}(t+neuron.plateau_duration, segment.id))
+            ev = Event{T, :plateau_start, SegmentID}(t, segment.id)
+            if !(ev in queue.valtree) # guard against repeated events
+                push!(queue, ev)
+                push!(queue, Event{T,:plateau_end,SegmentID}(t+neuron.plateau_duration, segment.id))
+            end
             
             if seg_id == :soma
-                push!(queue, Event{T,:spike_start,Symbol}(t, neuron.id.id))
-                push!(queue, Event{T,:spike_end,Symbol}(t+neuron.spike_duration, neuron.id.id))
+                ev = Event{T, :spike_start, Symbol}(t, neuron.id.id)
+                if !(ev in queue.valtree) # guard against repeated events
+                    push!(queue, Event{T,:spike_start,Symbol}(t, neuron.id.id))
+                    push!(queue, Event{T,:spike_end,Symbol}(t+neuron.spike_duration, neuron.id.id))
+                end
             end
         end
     end
