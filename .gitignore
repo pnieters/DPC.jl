@@ -2,4 +2,6 @@
 *.jl.*.cov
 *.jl.mem
 deps/deps.jl
-data/*
+.data/
+*.h5
+Manifest.toml
