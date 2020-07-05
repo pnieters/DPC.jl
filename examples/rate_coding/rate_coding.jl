@@ -2,7 +2,7 @@ using ADSP, Distributions, DataFrames, Plots
 
 # Create Poisson spike-trains
 population_size = 25
-tspan = (0.0,1000.0)
+tspan = (0.0,500.0)
 
 draw_spikes(population_firing_rates) = Dict(pop => [sort!(rand(rand(Poisson(firing_rate*(tspan[2]-tspan[1])))).*(tspan[2]-tspan[1]) .+ tspan[1]) for i ∈ 1:popsize] for (pop,(popsize,firing_rate)) in pairs(population_firing_rates))
 
@@ -20,7 +20,7 @@ end
 # load network
 net,meta = load_yaml(Network{Float64}, "examples/rate_coding/cfg/example_1.yaml")
 
-input_rates = LinRange(0,100,20)
+input_rates = LinRange(0,100,21)
 output_rates = zeros(length(input_rates))
 for (i,input_rate) ∈ enumerate(input_rates)
     output_rates[i] = count_spikes((A=(population_size, input_rate),)) / (tspan[2]-tspan[1])
@@ -42,7 +42,7 @@ plot(input_rates, [output_rates output_rates2])
 # experiment 3: three segments in a chain
 # load network
 net,meta = load_yaml(Network{Float64}, "examples/rate_coding/cfg/example_3.yaml")
-input_rates2d = LinRange(0,50,10)
+input_rates2d = LinRange(0,50,11)
 output_rates3 = zeros(length(input_rates2d),length(input_rates2d))
 for (i,input_rate_B) ∈ enumerate(input_rates2d)
     for (j,input_rate_C) ∈ enumerate(input_rates2d)
@@ -75,3 +75,5 @@ for (i,input_rate_B) ∈ enumerate(input_rates2d)
     end
 end
 contourf(input_rates2d,input_rates2d,output_rates5, levels = 20)
+
+@save "examples/rate_coding/examples_data.jld2" input_rates output_rates output_rates2 output_rates3 output_rates4 output_rates5
