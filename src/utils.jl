@@ -42,11 +42,11 @@ function plot_spike_raster(trange, spikes, spike_width; p=plot(), colors=1:sum(l
     k=0
     for (i,group) ∈ enumerate(spikes)
         for (j,synapse) ∈ enumerate(group)
-            plot!([Shape([t,t+spike_width,t+spike_width,t],[k-0.5, k-0.5, k+0.5, k+0.5]) for t ∈ synapse], color=colors[i])
+            plot!([Shape([t,t+spike_width,t+spike_width,t],[k-0.45, k-0.45, k+0.45, k+0.45]) for t ∈ synapse], color=colors[i])
             k-=1
         end
     end
-    plot!(; legend=false, grid=false, yticks=false, xlim=trange, ylim=(k-0.5,0.5), kwargs...)
+    plot!(; legend=false, grid=false, yticks=false, xlim=trange, ylim=(k+1-0.5,0.5), kwargs...)
     return p
 end
 
