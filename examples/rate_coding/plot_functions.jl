@@ -47,9 +47,9 @@ contourf!(input_rates2d,input_rates2d,output_rates4, levels=10)
 contour_or  = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="observed 'and'",xlabel=L"r_B", ylabel=L"r_C")
 contourf!(input_rates2d,input_rates2d,output_rates5, levels=10)
 
-contour_ideal_and = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="ideal 'or'",xlabel=L"r_B", ylabel=L"r_C")
+contour_ideal_and = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="ideal 'and'",xlabel=L"r_B", ylabel=L"r_C")
 contourf!(input_rates2d, input_rates2d, ideal_and,levels=10)
-contour_ideal_or = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="ideal 'and'",xlabel=L"r_B", ylabel=L"r_C")
+contour_ideal_or = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="ideal 'or'",xlabel=L"r_B", ylabel=L"r_C")
 contourf!(input_rates2d, input_rates2d, ideal_or, levels=10)
 
 
