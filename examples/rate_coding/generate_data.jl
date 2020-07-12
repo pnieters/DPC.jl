@@ -23,7 +23,6 @@ tspan = (0.0,250.0)
 input_rates = LinRange(0,100,21)
 input_rates2d = LinRange(0,50,11)
 
-
 # experiment 1: single soma-segment
 println("\n\n ========== EXPERIMENT 1 ========== \n\n")
 # load network
@@ -47,10 +46,6 @@ Threads.@threads for (i,input_rate) ∈ collect(enumerate(input_rates))
     output_rates2[i] = size(df, 1) / (tspan[2]-tspan[1])
     println("$(input_rates[i]): $(output_rates2[i])")
 end
-p12 = plot(input_rates, output_rates)
-plot!(twinx(), input_rates, output_rates2)
-display(p12)
-savefig(p12, "examples/rate_coding/experiment_1_2.svg")
 
 
 # experiment 3: three segments in a chain
@@ -65,10 +60,6 @@ Threads.@threads for (i,input_rate_B) ∈ collect(enumerate(input_rates2d))
         println("($(input_rates2d[i]),$(input_rates2d[j])): $(output_rates3[i,j])")
     end
 end
-p3 = contourf(input_rates2d,input_rates2d,output_rates3, levels = 20)
-display(p3)
-savefig(p3, "examples/rate_coding/experiment_3.svg")
-
 
 # experiment 4: three segments in 2 branches, `or` connected
 println("\n\n ========== EXPERIMENT 4 ========== \n\n")
@@ -82,9 +73,6 @@ Threads.@threads for (i,input_rate_B) ∈ collect(enumerate(input_rates2d))
         println("($(input_rates2d[i]),$(input_rates2d[j])): $(output_rates4[i,j])")
     end
 end
-p4 = contourf(input_rates2d,input_rates2d,output_rates4, levels = 20)
-display(p4)
-savefig(p4, "examples/rate_coding/experiment_4.svg")
 
 # experiment 5: three segments in 2 branches, `and` connected
 println("\n\n ========== EXPERIMENT 5 ========== \n\n")
@@ -98,20 +86,14 @@ Threads.@threads for (i,input_rate_B) ∈ collect(enumerate(input_rates2d))
         println("($(input_rates2d[i]),$(input_rates2d[j])): $(output_rates5[i,j])")
     end
 end
-p5 = contourf(input_rates2d,input_rates2d,output_rates5, levels = 20)
-display(p5)
-savefig(p5, "examples/rate_coding/experiment_5.svg")
 
+
+println("\n\n ========== EXPERIMENT 6 ========== \n\n")
 tspan_long = (0,1000)
+log_6 = run_experiment(deepcopy(net3), tspan_long, (A=(population_size, 35.0), B=(population_size, 35.0), C=(population_size, 35.0)))
 
-spikes_1,spikes_2,spikes_3,spikes_4,spikes_5 = begin
-    s1 = Threads.@spawn run_experiment(deepcopy(net1), tspan_long, (A=(population_size, 35.0),))
-    s2 = Threads.@spawn run_experiment(deepcopy(net2), tspan_long, (A=(population_size, 35.0),))
-    s3 = Threads.@spawn run_experiment(deepcopy(net3), tspan_long, (A=(population_size, 50.0), B=(population_size, 35.0), C=(population_size, 35.0)))
-    s4 = Threads.@spawn run_experiment(deepcopy(net4), tspan_long, (A=(population_size, 50.0), B=(population_size, 35.0), C=(population_size, 35.0)))
-    s5 = Threads.@spawn run_experiment(deepcopy(net5), tspan_long, (A=(population_size, 50.0), B=(population_size, 35.0), C=(population_size, 35.0)))
-    
-    fetch.((s1,s2,s3,s4,s5))
-end
+println("\n\n ========== EXPERIMENT 7 ========== \n\n")
+tspan_long = (0,1000)
+log_7 = run_experiment(deepcopy(net5), tspan_long, (A=(population_size, 35.0), B=(population_size, 35.0), C=(population_size, 35.0)))
 
-@save "examples/rate_coding/examples_data2.jld2" input_rates output_rates output_rates2 output_rates3 output_rates4 output_rates5 spikes_1 spikes_2 spikes_3 spikes_4 spikes_5
+@save "examples/rate_coding/examples_data.jld2" input_rates input_rates2d output_rates output_rates2 output_rates3 output_rates4 output_rates5 log_6 log_7
