@@ -42,11 +42,11 @@ function plot_spike_raster(trange, spikes, spike_width; p=plot(), colors=1:sum(l
     k=0
     for (i,group) ∈ enumerate(spikes)
         for (j,synapse) ∈ enumerate(group)
-            plot!([Shape([t,t+spike_width,t+spike_width,t],[k-0.5, k-0.5, k+0.5, k+0.5]) for t ∈ synapse], color=colors[i])
+            plot!([Shape([t,t+spike_width,t+spike_width,t],[k-0.45, k-0.45, k+0.45, k+0.45]) for t ∈ synapse], color=colors[i])
             k-=1
         end
     end
-    plot!(; legend=false, grid=false, yticks=false, xlim=trange, ylim=(k-0.5,0.5), kwargs...)
+    plot!(; legend=false, grid=false, yticks=false, xlim=trange, ylim=(k+1-0.5,0.5), kwargs...)
     return p
 end
 
@@ -115,7 +115,6 @@ function load_yaml(::Type{Network{T}}, YAML_file=nothing; YAML_source=nothing) w
     for (nid,neuron) ∈ obj["neurons"]
         neuron_id = NeuronID(Symbol(nid))
         spike_duration = (get(neuron, "spike_duration", default_spike_duration))
-        plateau_duration = (get(neuron, "plateau_duration", default_plateau_duration))
         release_probability = (get(neuron, "release_probability", default_release_probability))
 
         branches = _recursive_parse_branches!(nothing, :soma, neuron["soma"])
@@ -135,6 +134,7 @@ function load_yaml(::Type{Network{T}}, YAML_file=nothing; YAML_source=nothing) w
             seg_id = SegmentID(neuron_id, Symbol(bid))
             min_synapses = branch["min_synapses"]
             min_segments = branch["min_segments"]
+            plateau_duration = (get(branch, "plateau_duration", default_plateau_duration))
 
             next_upstream = descendents[bid]
             next_downstream = branch["ancestor"]
@@ -161,11 +161,10 @@ function load_yaml(::Type{Network{T}}, YAML_file=nothing; YAML_source=nothing) w
                 end
             end
 
-            segments[bid] = Segment(seg_id, min_synapses, min_segments, false, synapses, next_downstream, next_upstream)
+            segments[bid] = Segment(seg_id, min_synapses, min_segments, false, plateau_duration, synapses, next_downstream, next_upstream)
         end
 
-        (spike_duration, plateau_duration) = promote(spike_duration, plateau_duration)
-        neurons[Symbol(nid)] = Neuron(neuron_id, spike_duration, plateau_duration, segments)
+        neurons[Symbol(nid)] = Neuron(neuron_id, Float64(spike_duration), segments)
     end
 
     delete!(obj, "neurons")
@@ -201,6 +200,7 @@ function save_yaml(net::Network, filename=nothing, metainfo=Dict{Symbol,Any}())
             segments[segid] = Dict(
                 :min_synapses => segment.θ_syn,
                 :min_segments => segment.θ_seg,
+                :plateau_duration => segment.plateau_duration,
                 :synapses => synapse_groups,
                 :branches => Dict{Symbol,Dict}()
             )
@@ -214,7 +214,6 @@ function save_yaml(net::Network, filename=nothing, metainfo=Dict{Symbol,Any}())
 
         neurons[nid] = Dict(
             :spike_duration => neuron.spike_duration, 
-            :plateau_duration => neuron.plateau_duration,
             :soma => _nest_recursive(:soma, segments)
         )
     end

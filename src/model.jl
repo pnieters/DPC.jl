@@ -39,23 +39,23 @@ mutable struct Synapse
     active::Bool
 end
 
-# an individual segment has an ID, a synapse threshold, a segment threshold, a state (active/inactive) and incoming synaptic connections as well as information about the neighbouring segments.
-mutable struct Segment
+# an individual segment has an ID, a synapse threshold, a segment threshold, a state (active/inactive), the plateau duration and incoming synaptic connections as well as information about the neighbouring segments.
+mutable struct Segment{T}
     id::SegmentID
     θ_syn::Int
     θ_seg::Int
     active::Bool
+    plateau_duration::T
     
     synapses::Dict{Symbol,Vector{Synapse}}
     next_downstream::Union{Nothing,Symbol}
     next_upstream::Vector{Symbol}
 end
 
-# an individual neuron has an ID, stores spike and plateau durations and dendritic segments
+# an individual neuron has an ID, stores spike and dendritic segments
 struct Neuron{T}
     id::NeuronID
     spike_duration::T
-    plateau_duration::T
     segments::Dict{Symbol, Segment}
 end
 

@@ -1,0 +1,468 @@
+neurons:
+  simple:
+    spike_duration: 0.005
+    plateau_duration: 0.1
+    soma:
+      min_synapses: 8
+      min_segments: 0
+      synapses:
+        on1830:
+          - release_probability: 0.5179588171547367
+        off2194:
+          - release_probability: 0.28067758085803124
+        off1895:
+          - release_probability: 0.2885867099789078
+        off2074:
+          - release_probability: 0.6231185438127818
+        off1590:
+          - release_probability: 0.5645174794437879
+        off1531:
+          - release_probability: 0.4633304356219078
+        off1886:
+          - release_probability: 0.36813597386838504
+        off1826:
+          - release_probability: 0.46333043562190773
+        on1712:
+          - release_probability: 0.4692474791822748
+        on1655:
+          - release_probability: 0.5461081359780511
+        off1825:
+          - release_probability: 0.33303514977722243
+        on1831:
+          - release_probability: 0.869802603130888
+        off2132:
+          - release_probability: 0.4712392582685031
+        off1589:
+          - release_probability: 0.4943826278545743
+        on1715:
+          - release_probability: 0.5577003709328484
+        off1828:
+          - release_probability: 0.2885867099789078
+        off2072:
+          - release_probability: 0.2885867099789078
+        on1952:
+          - release_probability: 0.5179588171547367
+        off1529:
+          - release_probability: 0.28067758085803124
+        off1651:
+          - release_probability: 0.2885867099789078
+        on1654:
+          - release_probability: 0.5577003709328484
+        on2126:
+          - release_probability: 0.2530781645283347
+        off2015:
+          - release_probability: 0.6231185438127818
+        on2128:
+          - release_probability: 0.39470665212958556
+        off2192:
+          - release_probability: 0.4633304356219078
+        on1834:
+          - release_probability: 0.469247479182275
+        on2070:
+          - release_probability: 0.38513712482069345
+        on1714:
+          - release_probability: 0.7344436719297311
+        off1778:
+          - release_probability: 0.26054441658521127
+        off2075:
+          - release_probability: 0.5194094451215495
+        off1838:
+          - release_probability: 0.34451725872258215
+        off1647:
+          - release_probability: 0.3098139771287028
+        on2127:
+          - release_probability: 0.36787944117144233
+        off1766:
+          - release_probability: 0.42630779955904724
+        off1945:
+          - release_probability: 0.26054441658521127
+        off1649:
+          - release_probability: 0.6231185438127818
+        off1956:
+          - release_probability: 0.5645174794437879
+        off2133:
+          - release_probability: 0.5645174794437879
+        off1710:
+          - release_probability: 0.31854413199562337
+        off1769:
+          - release_probability: 0.31854413199562337
+        off2073:
+          - release_probability: 0.5464889525643182
+        off1650:
+          - release_probability: 0.5464889525643182
+        on2068:
+          - release_probability: 0.5461081359780511
+        off1897:
+          - release_probability: 0.46333043562190773
+        on1656:
+          - release_probability: 0.39470665212958556
+        on1833:
+          - release_probability: 0.8278927167948742
+        on2069:
+          - release_probability: 0.5577003709328484
+        on1594:
+          - release_probability: 0.2863752869966837
+        on1771:
+          - release_probability: 0.5179588171547367
+        on2009:
+          - release_probability: 0.7344436719297311
+        on1595:
+          - release_probability: 0.39470665212958556
+        off1707:
+          - release_probability: 0.4943826278545743
+        on1949:
+          - release_probability: 0.7138946687900265
+        on2007:
+          - release_probability: 0.2863752869966837
+        off2013:
+          - release_probability: 0.31854413199562337
+        on2187:
+          - release_probability: 0.25307816452833465
+        on1951:
+          - release_probability: 0.8278927167948742
+        on1653:
+          - release_probability: 0.38513712482069345
+        on2011:
+          - release_probability: 0.4692474791822748
+        off1957:
+          - release_probability: 0.42630779955904724
+        on1950:
+          - release_probability: 0.8948393168143698
+        on1773:
+          - release_probability: 0.8948393168143698
+        off2135:
+          - release_probability: 0.3098139771287028
+        off1955:
+          - release_probability: 0.5464889525643184
+        on1890:
+          - release_probability: 0.8278927167948742
+        on2010:
+          - release_probability: 0.7138946687900264
+        on1597:
+          - release_probability: 0.2530781645283347
+        on1716:
+          - release_probability: 0.2863752869966837
+        off1708:
+          - release_probability: 0.6231185438127818
+        on1596:
+          - release_probability: 0.36787944117144233
+        on1536:
+          - release_probability: 0.25307816452833465
+        off1588:
+          - release_probability: 0.3098139771287028
+        on1891:
+          - release_probability: 0.9877302162356105
+        off2251:
+          - release_probability: 0.34451725872258215
+        off1472:
+          - release_probability: 0.34451725872258215
+        off1827:
+          - release_probability: 0.4712392582685031
+        off1767:
+          - release_probability: 0.5645174794437879
+        off2016:
+          - release_probability: 0.4943826278545743
+        on1892:
+          - release_probability: 0.869802603130888
+        off1896:
+          - release_probability: 0.4712392582685031
+        off1898:
+          - release_probability: 0.33303514977722243
+        on1774:
+          - release_probability: 0.7138946687900265
+        off2076:
+          - release_probability: 0.3098139771287028
+        on1893:
+          - release_probability: 0.5179588171547367
+        off1648:
+          - release_probability: 0.5194094451215495
+        off2193:
+          - release_probability: 0.42630779955904724
+        on1772:
+          - release_probability: 0.8278927167948742
+        on1889:
+          - release_probability: 0.469247479182275
+        off1954:
+          - release_probability: 0.31854413199562337
+        off1768:
+          - release_probability: 0.5464889525643184
+        off1530:
+          - release_probability: 0.42630779955904724
+        off1706:
+          - release_probability: 0.28067758085803124
+        off1885:
+          - release_probability: 0.34451725872258215
+        on1775:
+          - release_probability: 0.3851371248206936
+        off1837:
+          - release_probability: 0.36813597386838504
+        off2014:
+          - release_probability: 0.5741535151594892
+        off1471:
+          - release_probability: 0.33303514977722243
+        off1709:
+          - release_probability: 0.5741535151594892
+        off2191:
+          - release_probability: 0.36813597386838515
+        off1473:
+          - release_probability: 0.26054441658521127
+        on2129:
+          - release_probability: 0.2863752869966837
+        on1948:
+          - release_probability: 0.3851371248206936
+        off2017:
+          - release_probability: 0.28067758085803124
+        off1591:
+          - release_probability: 0.4712392582685031
+        off2252:
+          - release_probability: 0.33303514977722243
+        on2008:
+          - release_probability: 0.5577003709328484
+        on1832:
+          - release_probability: 0.9877302162356105
+        on2067:
+          - release_probability: 0.39470665212958556
+        on1713:
+          - release_probability: 0.7138946687900264
+        off2250:
+          - release_probability: 0.26054441658521127
+        off2134:
+          - release_probability: 0.4943826278545743
+        off1532:
+          - release_probability: 0.36813597386838515
+      branches:
+  compartmentalized:
+    spike_duration: 0.005
+    plateau_duration: 0.1
+    soma:
+      min_synapses: 0
+      min_segments: 7
+      synapses:
+        off1771:
+          - release_probability: 0.32919298780790557
+        off1951:
+          - release_probability: 0.32919298780790557
+        off1952:
+          - release_probability: 0.32919298780790557
+        off1890:
+          - release_probability: 0.32919298780790557
+        off1893:
+          - release_probability: 0.32919298780790557
+        off1833:
+          - release_probability: 0.32919298780790557
+        off1891:
+          - release_probability: 0.8007374029168081
+        off1772:
+          - release_probability: 0.32919298780790557
+        off1831:
+          - release_probability: 0.8007374029168081
+        off1830:
+          - release_probability: 0.32919298780790557
+        off1892:
+          - release_probability: 0.8007374029168081
+        off1832:
+          - release_probability: 0.8007374029168081
+      branches:
+        left_2:
+          min_synapses: 4
+          min_segments: 0
+          synapses:
+            off1648:
+              - release_probability: 0.8007374029168078
+            off1768:
+              - release_probability: 0.32919298780790557
+            off1647:
+              - release_probability: 0.32919298780790557
+            off1649:
+              - release_probability: 0.800737402916808
+            off1708:
+              - release_probability: 0.800737402916808
+            off1589:
+              - release_probability: 0.32919298780790557
+            off1710:
+              - release_probability: 0.32919298780790557
+            off1588:
+              - release_probability: 0.32919298780790557
+            off1650:
+              - release_probability: 0.32919298780790557
+            off1769:
+              - release_probability: 0.32919298780790557
+            off1709:
+              - release_probability: 0.8007374029168082
+            off1707:
+              - release_probability: 0.32919298780790557
+          branches:
+        left_1:
+          min_synapses: 4
+          min_segments: 0
+          synapses:
+            off1949:
+              - release_probability: 0.32919298780790557
+            off2128:
+              - release_probability: 0.32919298780790557
+            off2010:
+              - release_probability: 0.32919298780790557
+            off2009:
+              - release_probability: 0.8007374029168082
+            off2069:
+              - release_probability: 0.800737402916808
+            off2008:
+              - release_probability: 0.800737402916808
+            off2007:
+              - release_probability: 0.32919298780790557
+            off1948:
+              - release_probability: 0.32919298780790557
+            off2070:
+              - release_probability: 0.32919298780790557
+            off2067:
+              - release_probability: 0.32919298780790557
+            off2068:
+              - release_probability: 0.8007374029168078
+            off2129:
+              - release_probability: 0.32919298780790557
+          branches:
+        center_3:
+          min_synapses: 4
+          min_segments: 0
+          synapses:
+            on1473:
+              - release_probability: 0.3291929878079056
+            on1411:
+              - release_probability: 0.32919298780790557
+            on1412:
+              - release_probability: 0.32919298780790557
+            on1591:
+              - release_probability: 0.32919298780790557
+            on1592:
+              - release_probability: 0.32919298780790557
+            on1471:
+              - release_probability: 0.8007374029168082
+            on1472:
+              - release_probability: 0.8007374029168082
+            on1530:
+              - release_probability: 0.32919298780790557
+            on1531:
+              - release_probability: 0.800737402916808
+            on1533:
+              - release_probability: 0.32919298780790557
+            on1532:
+              - release_probability: 0.800737402916808
+            on1470:
+              - release_probability: 0.3291929878079056
+          branches:
+        center_1:
+          min_synapses: 4
+          min_segments: 0
+          synapses:
+            on2132:
+              - release_probability: 0.32919298780790557
+            on2250:
+              - release_probability: 0.3291929878079056
+            on2251:
+              - release_probability: 0.8007374029168082
+            on2190:
+              - release_probability: 0.32919298780790557
+            on2192:
+              - release_probability: 0.800737402916808
+            on2253:
+              - release_probability: 0.3291929878079056
+            on2193:
+              - release_probability: 0.32919298780790557
+            on2312:
+              - release_probability: 0.32919298780790557
+            on2252:
+              - release_probability: 0.8007374029168082
+            on2131:
+              - release_probability: 0.32919298780790557
+            on2311:
+              - release_probability: 0.32919298780790557
+            on2191:
+              - release_probability: 0.800737402916808
+          branches:
+        center_2:
+          min_synapses: 4
+          min_segments: 0
+          synapses:
+            on1830:
+              - release_probability: 0.32919298780790557
+            on1772:
+              - release_probability: 0.32919298780790557
+            on1951:
+              - release_probability: 0.32919298780790557
+            on1890:
+              - release_probability: 0.32919298780790557
+            on1831:
+              - release_probability: 0.8007374029168081
+            on1891:
+              - release_probability: 0.8007374029168081
+            on1952:
+              - release_probability: 0.32919298780790557
+            on1833:
+              - release_probability: 0.32919298780790557
+            on1832:
+              - release_probability: 0.8007374029168081
+            on1771:
+              - release_probability: 0.32919298780790557
+            on1892:
+              - release_probability: 0.8007374029168081
+            on1893:
+              - release_probability: 0.32919298780790557
+          branches:
+        right_2:
+          min_synapses: 4
+          min_segments: 0
+          synapses:
+            off1713:
+              - release_probability: 0.32919298780790557
+            off1595:
+              - release_probability: 0.32919298780790557
+            off1774:
+              - release_probability: 0.32919298780790557
+            off1594:
+              - release_probability: 0.32919298780790557
+            off1775:
+              - release_probability: 0.32919298780790557
+            off1654:
+              - release_probability: 0.800737402916808
+            off1716:
+              - release_probability: 0.32919298780790557
+            off1715:
+              - release_probability: 0.800737402916808
+            off1653:
+              - release_probability: 0.32919298780790557
+            off1714:
+              - release_probability: 0.8007374029168082
+            off1655:
+              - release_probability: 0.8007374029168078
+            off1656:
+              - release_probability: 0.32919298780790557
+          branches:
+        right_1:
+          min_synapses: 4
+          min_segments: 0
+          synapses:
+            off2075:
+              - release_probability: 0.8007374029168078
+            off1954:
+              - release_probability: 0.32919298780790557
+            off2135:
+              - release_probability: 0.32919298780790557
+            off1955:
+              - release_probability: 0.32919298780790557
+            off2074:
+              - release_probability: 0.800737402916808
+            off2014:
+              - release_probability: 0.8007374029168082
+            off2073:
+              - release_probability: 0.32919298780790557
+            off2016:
+              - release_probability: 0.32919298780790557
+            off2076:
+              - release_probability: 0.32919298780790557
+            off2015:
+              - release_probability: 0.800737402916808
+            off2134:
+              - release_probability: 0.32919298780790557
+            off2013:
+              - release_probability: 0.32919298780790557
+          branches:

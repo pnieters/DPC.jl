@@ -3,15 +3,116 @@ spike_duration: 0.005
 neurons:
     simple: 
         soma:
-            min_synapses: 5
+            min_synapses: 8
             min_segments: 0
             synapses: {}
             branches: {}
-
+    compartmentalized:
+        soma:
+            min_synapses: 0
+            min_segments: 7
+            synapses: {}
+            branches:
+                left_1:
+                    min_synapses: 4
+                    min_segments: 0
+                    synapses: {}
+                    branches: {}
+                left_2:
+                    min_synapses: 4
+                    min_segments: 0
+                    synapses: {}
+                    branches: {}
+                right_1:
+                    min_synapses: 4
+                    min_segments: 0
+                    synapses: {}
+                    branches: {}
+                right_2:
+                    min_synapses: 4
+                    min_segments: 0
+                    synapses: {}
+                    branches: {}
+                center_1:
+                    min_synapses: 4
+                    min_segments: 0
+                    synapses: {}
+                    branches: {}
+                center_2:
+                    min_synapses: 4
+                    min_segments: 0
+                    synapses: {}
+                    branches: {}
+                center_3:
+                    min_synapses: 4
+                    min_segments: 0
+                    synapses: {}
+                    branches: {}
 configuration:
     simple:
         soma:
             location: [0.0, 0.0]
-            orientation: 0.125
-            aperture: 2.0
-            phase: 0.0
+            connection_threshold: 0.25
+            gabor:
+                scale: 1.0
+                orientation: 0.125
+                aperture: 1.5
+                phase: 0.0
+                frequency: 1.0
+    compartmentalized:
+        soma: 
+            location: [0.0, 0.0]
+            connection_threshold: 0.25
+            gaussian:
+                scale: -1.0
+                orientation: 0.0
+                stds: [0.5,0.5]
+        left_1:
+            location: [-1.0, 1.0]
+            connection_threshold: 0.25
+            gaussian:
+                scale: -1.0
+                orientation: 0.0
+                stds: [0.5,0.5]
+        left_2:
+            location: [-1.0, -1.0]
+            connection_threshold: 0.25
+            gaussian:
+                scale: -1.0
+                orientation: 0.0
+                stds: [0.5,0.5]
+        right_1:
+            location: [1.0, 1.0]
+            connection_threshold: 0.25
+            gaussian:
+                scale: -1.0
+                orientation: 0.0
+                stds: [0.5,0.5]
+        right_2:
+            location: [1.0, -1.0]
+            connection_threshold: 0.25
+            gaussian:
+                scale: -1.0
+                orientation: 0.0
+                stds: [0.5,0.5]
+        center_1:
+            location: [0.0, 2.0]
+            connection_threshold: 0.25
+            gaussian:
+                scale: 1.0
+                orientation: 0.0
+                stds: [0.5,0.5]
+        center_2:
+            location: [0.0, 0.0]
+            connection_threshold: 0.25
+            gaussian:
+                scale: 1.0
+                orientation: 0.0
+                stds: [0.5,0.5]
+        center_3:
+            location: [0.0, -2.0]
+            connection_threshold: 0.25
+            gaussian:
+                scale: 1.0
+                orientation: 0.0
+                stds: [0.5,0.5]

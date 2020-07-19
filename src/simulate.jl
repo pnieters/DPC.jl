@@ -119,7 +119,7 @@ function update!(neuron::Neuron{T}, t, queue) where {T}
             ev = Event{T, :plateau_start, SegmentID}(t, segment.id)
             if !(ev in queue.valtree) # guard against repeated events
                 push!(queue, ev)
-                push!(queue, Event{T,:plateau_end,SegmentID}(t+neuron.plateau_duration, segment.id))
+                push!(queue, Event{T,:plateau_end,SegmentID}(t+segment.plateau_duration, segment.id))
             end
             
             if seg_id == :soma
