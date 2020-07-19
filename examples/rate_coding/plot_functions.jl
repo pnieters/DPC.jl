@@ -1,7 +1,7 @@
 using ADSP, JLD2, Distributions, DataFrames, LaTeXStrings, Plots, KernelDensity
 
 println("Loading data...")
-@load "examples/rate_coding/examples_data.jld2" input_rates input_rates2d output_rates output_rates2 output_rates3 output_rates4 output_rates5 
+@load "examples/rate_coding/data/examples_data.jld2" input_rates input_rates2d output_rates output_rates2 output_rates3 output_rates4 output_rates5 
 
 r_A = 35.0
 
@@ -29,10 +29,10 @@ ideal_or = (1 .-(1 .-out_rates2d.*0.1) .* (1 .-out_rates2d'.*0.1)) * in_out(r_A)
 | schema | contour   | schema | contour | schema | contour |
 """
 
-schema_soma = plot(framestyle=:none, background=:silver)
-schema_seq = plot(framestyle=:none, background=:silver)
-schema_and = plot(framestyle=:none, background=:silver)
-schema_or  = plot(framestyle=:none, background=:silver)
+schema_soma = plot(framestyle=:none, title="segment")
+schema_seq = plot(framestyle=:none, title="N₁")
+schema_and = plot(framestyle=:none, title="N₂")
+schema_or  = plot(framestyle=:none, title="N₃")
 
 filler = plot(framestyle=:none)
 
@@ -40,11 +40,11 @@ io_curve = plot(legend=false, title="input/output", xlabel=L"r_A", ylabel=L"A(r_
 plot!(input_rates, output_rates2, color=:black, linewidth=2)
 # plot!(twinx(), input_rates, output_rates, color=:gray, linestyle=:dash, linewidth=2, legend=false)
 
-contour_seq = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="observed 'then'",xlabel=L"r_B", ylabel=L"r_C")
+contour_seq = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="'then' neuron",xlabel=L"r_B", ylabel=L"r_C")
 contourf!(input_rates2d,input_rates2d,output_rates3, levels=10)
-contour_and = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="observed 'or'",xlabel=L"r_B", ylabel=L"r_C")
+contour_and = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="'or' neuron",xlabel=L"r_B", ylabel=L"r_C")
 contourf!(input_rates2d,input_rates2d,output_rates4, levels=10)
-contour_or  = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="observed 'and'",xlabel=L"r_B", ylabel=L"r_C")
+contour_or  = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="'and' neuron",xlabel=L"r_B", ylabel=L"r_C")
 contourf!(input_rates2d,input_rates2d,output_rates5, levels=10)
 
 contour_ideal_and = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="ideal 'and'",xlabel=L"r_B", ylabel=L"r_C")
@@ -64,4 +64,4 @@ widths./=sum(widths)
 w = 4.7747 * 150
 h = 0.45*w
 plot(permutedims(plts)..., layout=grid(2,6, widths=widths), size=(w,h))
-savefig("examples/rate_coding/functions.svg")
+savefig("examples/rate_coding/figures/functions.svg")

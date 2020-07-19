@@ -90,7 +90,7 @@ function dist_2(t, a, b; c=0.1, d=0.1)
 end
 
 println("Loading data...")
-@load "examples/rate_coding/examples_data2.jld2" input_rates output_rates2 log_6 log_7
+@load "examples/rate_coding/data/examples_data.jld2" input_rates output_rates2 log_6 log_7 log_8
 
 println("Processing data...")
 kernel(t) = float(0.0 ≤ t ≤ 5e-3)
@@ -98,21 +98,24 @@ populations = (A=Symbol.("A",1:25),B=Symbol.("B",1:25),C=Symbol.("C",1:25))
 segments = (A=SegmentID(NeuronID(:main),:soma),B=SegmentID(NeuronID(:main),:B),C=SegmentID(NeuronID(:main),:C))
 sta6, sta_plateaus6 = extract_population_sta(log_6, populations, segments; kernel=kernel, spike_window=(-0.25,0.1), plateau_window=(-0.25,0.0))
 sta7, sta_plateaus7 = extract_population_sta(log_7, populations, segments; kernel=kernel, spike_window=(-0.25,0.1), plateau_window=(-0.25,0.0))
+sta8, sta_plateaus8 = extract_population_sta(log_8, populations, segments; kernel=kernel, spike_window=(-0.25,0.1), plateau_window=(-0.25,0.0))
 
 plots = Plots.Plot[]
-for (example,sta,sta_plateaus) ∈ [(:sequential, sta6, sta_plateaus6), (:parallel, sta7, sta_plateaus7)]
-    # plot the spike-triggered averages of the spiking inputs
-    x = LinRange(-0.2,0.01, 251)
-    p_sta = plot(
-        xlims=(-0.2,0.01), 
-        legend=false, 
-        title="$(example) segments",
-        xlabel=L"t-t_A",
-        ylabel=L"B(t), C(t)"
-    )
-    # plot!(x,[sta6[:C].(x) sta6[:B].(x) sta6[:A].(x)], linewidth=2, labels=["segment C" "segment B" "segment A"])
-    plot!(x,[sta[:C].(x) sta[:B].(x)], linewidth=2, labels=["segment C" "segment B"])
-    vline!([0],linewidth=2, color=:black)
+for (i,example,sta,sta_plateaus) ∈ [(1,:sequential, sta6, sta_plateaus6), (2,:and, sta8, sta_plateaus8), (3,:or, sta7, sta_plateaus7)]
+    # # plot the spike-triggered averages of the spiking inputs
+    # x = LinRange(-0.2,0.01, 251)
+    # p_sta = plot(
+    #     xlims=(-0.2,0.01), 
+    #     legend=false, 
+    #     title="$(example) segments",
+    #     xlabel=L"t-t_A",
+    #     ylabel=L"B(t), C(t)"
+    # )
+    # # plot!(x,[sta6[:C].(x) sta6[:B].(x) sta6[:A].(x)], linewidth=2, labels=["segment C" "segment B" "segment A"])
+    # plot!(x,[sta[:C].(x) sta[:B].(x)], linewidth=2, labels=["segment C" "segment B"])
+    # vline!([0],linewidth=2, color=:black)
+    # push!(plots, p_sta)
+
     # plot the spike-triggered plateaus
     p_sta_plateaus = plot(
         aspect_ratio=:equal, 
@@ -122,26 +125,29 @@ for (example,sta,sta_plateaus) ∈ [(:sequential, sta6, sta_plateaus6), (:parall
         xlabel=L"\Delta t_B = t_B-t_A",
         ylabel=L"\Delta t_C = t_C-t_A",
         framestyle=:semi,
-        title=L"P(\Delta t_B,\Delta t_C|t_A)",
+        title=latexstring("P_{$i}(\\Delta t_B,\\Delta t_C|t_A)"),
     )
     # scatter!(sta_plateaus[:B],sta_plateaus[:C], alpha=0.5, marker=:o, markersize=2, label="all pairs")
     idx = Base.:~.(ismissing.(sta_plateaus[:B]) .| ismissing.(sta_plateaus[:C]))
     K = kde((collect(skipmissing(sta_plateaus[:B][idx])),collect(skipmissing(sta_plateaus[:C][idx]))))
     contourf!(K.x, K.y, K.density',levels=25, colorbar=false)
-    scatter!(sta_plateaus[:B][sta_plateaus[:is_unique]],sta_plateaus[:C][sta_plateaus[:is_unique]], color=:white, marker=:x, markersize=2, label="unambiguous pairs")
-    if example==:sequential
+    scatter!(sta_plateaus[:B][sta_plateaus[:is_unique]],sta_plateaus[:C][sta_plateaus[:is_unique]], color=:white, marker=:., markersize=2, label="unambiguous pairs")
+    if example== :sequential
         plot!([-0.25 -0.25 -0.15 -0.1; 0 0 0 -0.1],[-0.1 -0.25 -0.25 -0.25; -0.1 0.0 -0.1 0.0], linewidth=2, color=:gray, linestyle=:dash, label="")
         plot!([-0.1, 0.0, 0.0, -0.1, -0.1], [-0.2,-0.1,0.0,-0.1,-0.2], linewidth=3, color=:white, label="")
-    else
+    elseif example == :and
         plot!([-0.25 -0.1; 0 -0.1],[-0.1 -0.25; -0.1 0.0], linewidth=2, color=:gray, linestyle=:dash, label="")
         plot!([-0.1, 0.0, 0.0, -0.1, -0.1], [-0.1, -0.1, 0.0, 0.0, -0.1], linewidth=3, color=:white, label="")
+    else
+        plot!([-0.25 -0.1; 0 -0.1],[-0.1 -0.25; -0.1 0.0], linewidth=2, color=:gray, linestyle=:dash, label="")
+        plot!([-0.2, -0.1, -0.1, 0.0, 0.0, -0.2, -0.2], [-0.1, -0.1, -0.2, -0.2, 0.0, 0.0, -0.1], linewidth=3, color=:white, label="")
     end
 
-    push!(plots, p_sta)
     push!(plots, p_sta_plateaus)
 end
 
 w = 4.7747 * 150
-h = 0.5/0.75*w
-plot(plots[[1,3,2,4]]..., link=:x, layout=grid(2,2, widths=[0.5, 0.5], heights=[0.25,0.75]), size=(w,h))
-savefig("examples/rate_coding/sta.svg")
+h = 0.33*w
+# plot(plots[[1,3,2,4]]..., link=:x, layout=grid(2,2, widths=[0.5, 0.5], heights=[0.25,0.75]), size=(w,h))
+plot(plots..., link=:x, layout=grid(1,3), size=(w,h))
+savefig("examples/rate_coding/figures/sta.svg")

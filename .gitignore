@@ -3,5 +3,6 @@
 *.jl.mem
 deps/deps.jl
 data/*
+examples/rate_coding/data/*
 *.h5
 Manifest.toml
