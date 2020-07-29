@@ -1,25 +1,26 @@
 using ADSP, DifferentialEquations
-
 ## Set general parameters ##
 
-num_paths=50                                                # generate 50 paths to show in the spagghetti plot
+const num_paths=50                                                # generate 50 paths to show in the spagghetti plot
 trange = (0.0, 0.3)                                         # time duration of each simulation run
-path_params = (v̄ = 0.25, γ = 10.0, aₐ= 0.5, aᵥ= 0.1)        # parameters determining the paths dynamics 
-grid_params = (r = 13/45*0.1, xscale=0.1, yscale=0.1*85/90)     # parameters determining the aspect and distance of the hex-grid
-domain = ((0,0),(grid_params.xscale,grid_params.yscale))    # set the box domain containing the hex grid
+const path_params = (v̄ = 0.25, γ = 10.0, aₐ= 0.25, aᵥ= 0.1)        # parameters determining the paths dynamics 
+const grid_params = (r = 13/45*0.1, xscale=0.1, yscale=0.1*85/90)     # parameters determining the aspect and distance of the hex-grid
+const domain = ((0,0),(grid_params.xscale,grid_params.yscale))    # set the box domain containing the hex grid
 
+const idx = [1,3,6]
+const labels = [:b,:e,:c,:g,:f,:a,:d][idx]
 # fix position, radii and associated color of each gridcell population
-gridcell_colors = ["#fcaf3e", "#8ae234", "#ad7fa8", "#729f7e", "#fce94f", "#729fcf", "#ef2929", "#cccccc"]
+const gridcell_colors = ["#fcaf3e", "#8ae234", "#ad7fa8", "#729f7e", "#fce94f", "#729fcf", "#ef2929", "#cccccc"][idx]
 
 ## Construct receptive field populations ##
-λ = 20.0 #[Hz] rate at which population spikes are emitted
+const λ = 100.0 #[Hz] rate at which population spikes are emitted
 
 # grid cell centers are located on a hexagonal grid (here 6 centers on a circle around the 1st)
-gridcell_centers = [[[0.5*grid_params.xscale,0.5*grid_params.yscale]];[[cos(2π*α)*grid_params.r+0.5*grid_params.xscale,sin(2π*α)*grid_params.r+0.5*grid_params.yscale] for α ∈ 0:1//6:5//6]]
+const gridcell_centers = [[[0.5*grid_params.xscale,0.5*grid_params.yscale]];[[cos(2π*α)*grid_params.r+0.5*grid_params.xscale,sin(2π*α)*grid_params.r+0.5*grid_params.yscale] for α ∈ 0:1//6:5//6]][idx]
 # the grid cells have a "radius" corresponding to the standard deviation of the Gaussian function
-gridcell_radii = fill(grid_params.r/3, length(gridcell_centers))
+const gridcell_radii = fill(grid_params.r/3, length(gridcell_centers))
 # the receptive field functions are Gaussians centered at the gridcell_centers with radii determined by gridcell_radii
-rfs = [v->exp(-sum((v[1:2].-μ).^2)/(2σ^2))  for (μ,σ) ∈ zip(gridcell_centers, gridcell_radii)]
+const rfs = [v->exp(-sum((v[1:2].-μ).^2)/(2σ^2))  for (μ,σ) ∈ zip(gridcell_centers, gridcell_radii)]
 
 """
     generatePath(trange, params, u₀; dt=1e-3)
@@ -33,7 +34,7 @@ Generate one paths in the time interval `trange` with parameters specified by `p
 
 Return a JuliaDiffEq `solution` object.
 """
-function generatePath(trange, params, u₀; dt=1e-3)
+function generatePath(trange, params, u₀, args...; kwargs...)
     """
     Drift term of the movement.
     """
@@ -55,30 +56,34 @@ function generatePath(trange, params, u₀; dt=1e-3)
     end
 
     prob = SDEProblem(f, g, u₀, trange, params)
-    sol = solve(prob, SRIW1(), dt=dt)
+    sol = solve(prob, SRIW1(), args...; kwargs...)
 
     return sol
 end
 
+"""
+    generateLinePath(trange, α, v, x₀; kwargs...)
+
+Generate one straight-line path in the time interval `trange` with angle `α` (c.c.w from positive x-axis, in radians), velocity `v` and starting position `x₀`.
+Returns a function `t -> [x(t),y(t)]`.
+"""
+generateLinePath(trange, α, v, x₀) = ((t)-> x₀ .+ [cos(α),sin(α)] .* (v*t))
+
 # draw an initial condition from the bounded region
 generate_u₀(params,domain) = [rand()*(domain[2][1]-domain[1][1])+domain[1][1], rand()*(domain[2][2]-domain[1][2])+domain[1][2], rand(), randn()*params.aᵥ/√(2*params.γ)+params.v̄]
 
-
-function run_path(cfg, log; extra_events=[], group_size=10, background_rate=0.0)
+function run_path(cfg, path, log=OrderedDict(); extra_events=[], group_size=10, background_rate=0.0)
     # instantiate the network and a corresponding logger
-    net = open(cfg) do f
-        load_yaml(Network{Float64}, f)
-    end
+    net,meta = load_yaml(Network{Float64}, cfg)
 
-    # generate a path, convert it into spike trains and convert the spike trains into Events
-    p = generatePath(trange, path_params, generate_u₀(path_params, domain))
-    s = generateRFSpikes(trange, p, rfs, λ; group_size=fill(group_size,7), background_rate=background_rate)
-    events = sort!([generateEventsFromSpikes(s, [:b,:e,:c,:g,:f,:a,:d]; spike_duration=0.005);extra_events])
+    # convert path into spike trains and convert the spike trains into Events
+    s = generateRFSpikes(trange, path, rfs, λ; group_size=fill(group_size,length(gridcell_centers)), background_rate=background_rate)
+    events = sort!([generateEventsFromSpikes(s, labels; spike_duration=0.005);extra_events])
 
     # simulate the neuron's response to the input
     log=simulate!(net, events;log=log, show_progress=false)
 
-    return p,s,log
+    return s,log
 end
 
 function estimate_response_probabilities(N;n_pop=20,n_ens=10,θ=5,p_trans=0.5,p_pop=0.5, λ=1.0)

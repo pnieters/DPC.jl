@@ -42,7 +42,7 @@ function plot_spike_raster(trange, spikes, spike_width; p=plot(), colors=1:sum(l
     k=0
     for (i,group) ∈ enumerate(spikes)
         for (j,synapse) ∈ enumerate(group)
-            plot!([Shape([t,t+spike_width,t+spike_width,t],[k-0.45, k-0.45, k+0.45, k+0.45]) for t ∈ synapse], color=colors[i])
+            plot!([Shape([t,t+spike_width,t+spike_width,t],[k-0.45, k-0.45, k+0.45, k+0.45]) for t ∈ synapse], color=colors[i], linecolor=nothing)
             k-=1
         end
     end
@@ -100,7 +100,7 @@ Loads a network from a configuration file or string `YAML_source`.
 """
 function load_yaml(::Type{Network{T}}, YAML_file=nothing; YAML_source=nothing) where {T}
     @assert (YAML_file === nothing) ⊻ (YAML_source === nothing) "Must provide exactly one of `YAML_file` or `YAML_source` "
-    obj = if YAML_file != nothing
+    obj = if YAML_file !== nothing
         YAML.load_file(YAML_file)
     else
         YAML.load(YAML_source)

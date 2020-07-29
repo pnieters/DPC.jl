@@ -14,7 +14,9 @@ function run()
 
     while any(counts .< num_paths)
         # generate a single path and the response
-        p,s,log = run_path(cfg, logged_segments; group_size=20, background_rate=10)
+        p = generatePath(trange, path_params, generate_u₀(path_params, domain))
+
+        s,log = run_path(cfg, p, logged_segments; group_size=20, background_rate=10)
 
         for (i,neuron) ∈ enumerate([:readout1, :readout2, :readout3])
             # if this path ended in a somatic plateau -> generate the plot
