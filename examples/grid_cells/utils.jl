@@ -2,7 +2,6 @@ using ADSP, DifferentialEquations
 ## Set general parameters ##
 
 const num_paths=50                                                # generate 50 paths to show in the spagghetti plot
-trange = (0.0, 0.3)                                         # time duration of each simulation run
 const path_params = (v̄ = 0.25, γ = 10.0, aₐ= 0.25, aᵥ= 0.1)        # parameters determining the paths dynamics 
 const grid_params = (r = 13/45*0.1, xscale=0.1, yscale=0.1*85/90)     # parameters determining the aspect and distance of the hex-grid
 const domain = ((0,0),(grid_params.xscale,grid_params.yscale))    # set the box domain containing the hex grid
@@ -13,7 +12,6 @@ const labels = [:b,:e,:c,:g,:f,:a,:d][idx]
 const gridcell_colors = ["#fcaf3e", "#8ae234", "#ad7fa8", "#729f7e", "#fce94f", "#729fcf", "#ef2929", "#cccccc"][idx]
 
 ## Construct receptive field populations ##
-const λ = 100.0 #[Hz] rate at which population spikes are emitted
 
 # grid cell centers are located on a hexagonal grid (here 6 centers on a circle around the 1st)
 const gridcell_centers = [[[0.5*grid_params.xscale,0.5*grid_params.yscale]];[[cos(2π*α)*grid_params.r+0.5*grid_params.xscale,sin(2π*α)*grid_params.r+0.5*grid_params.yscale] for α ∈ 0:1//6:5//6]][idx]
