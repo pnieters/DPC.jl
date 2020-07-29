@@ -18,7 +18,7 @@ const gridcell_centers = [[[0.5*grid_params.xscale,0.5*grid_params.yscale]];[[co
 # the grid cells have a "radius" corresponding to the standard deviation of the Gaussian function
 const gridcell_radii = fill(grid_params.r/3, length(gridcell_centers))
 # the receptive field functions are Gaussians centered at the gridcell_centers with radii determined by gridcell_radii
-const rfs = [v->exp(-sum((v[1:2].-μ).^2)/(2σ^2))  for (μ,σ) ∈ zip(gridcell_centers, gridcell_radii)]
+const rfs = [v-> ismissing(v) ? 0.0 : exp(-sum((v[1:2].-μ).^2)/(2σ^2))  for (μ,σ) ∈ zip(gridcell_centers, gridcell_radii)]
 
 """
     generatePath(trange, params, u₀; dt=1e-3)
@@ -56,7 +56,7 @@ function generatePath(trange, params, u₀, args...; kwargs...)
     prob = SDEProblem(f, g, u₀, trange, params)
     sol = solve(prob, SRIW1(), args...; kwargs...)
 
-    return sol
+    return (t, args...; kwargs...) -> trange[1] ≤ t ≤ trange[2] ? sol(t, args...; kwargs...) : missing
 end
 
 """
@@ -65,7 +65,7 @@ end
 Generate one straight-line path in the time interval `trange` with angle `α` (c.c.w from positive x-axis, in radians), velocity `v` and starting position `x₀`.
 Returns a function `t -> [x(t),y(t)]`.
 """
-generateLinePath(trange, α, v, x₀) = ((t)-> x₀ .+ [cos(α),sin(α)] .* (v*t))
+generateLinePath(trange, α, v, x₀) = ((t)-> trange[1] ≤ t ≤ trange[2] ? x₀ .+ [cos(α),sin(α)] .* (v*(t-trange[1])) : missing)
 
 # draw an initial condition from the bounded region
 generate_u₀(params,domain) = [rand()*(domain[2][1]-domain[1][1])+domain[1][1], rand()*(domain[2][2]-domain[1][2])+domain[1][2], rand(), randn()*params.aᵥ/√(2*params.γ)+params.v̄]
