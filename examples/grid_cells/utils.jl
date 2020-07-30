@@ -9,7 +9,8 @@ const domain = ((0,0),(grid_params.xscale,grid_params.yscale))    # set the box 
 const idx = [1,3,6]
 const labels = [:b,:e,:c,:g,:f,:a,:d][idx]
 # fix position, radii and associated color of each gridcell population
-const gridcell_colors = ["#fcaf3e", "#8ae234", "#ad7fa8", "#729f7e", "#fce94f", "#729fcf", "#ef2929", "#cccccc"][idx]
+const mypalette = (orange="#fcaf3e", green="#8ae234", purple="#ad7fa8", turquise="#729f7e", yellow="#fce94f", blue="#729fcf", red="#ef2929", gray="#cccccc")
+const gridcell_colors = collect(mypalette)[idx]
 
 ## Construct receptive field populations ##
 
