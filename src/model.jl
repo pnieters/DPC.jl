@@ -56,7 +56,7 @@ end
 struct Neuron{T}
     id::NeuronID
     spike_duration::T
-    segments::Dict{Symbol, Segment}
+    segments::Dict{Symbol, Segment{T}}
 end
 
 # a network is a collection of neurons and allows for convenient indexing of objects by ID

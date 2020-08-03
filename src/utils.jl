@@ -1,6 +1,6 @@
-using Distributions, Plots, YAML
+using Distributions, Plots, YAML, DifferentialEquations
 
-export generateRFSpikes, plot_spike_raster, generateEventsFromSpikes, load_yaml, save_yaml
+export generateRFSpikes, generateSpikeVolleys, plot_spike_raster, sample_inhomogeneous_poisson, generateEventsFromSpikes, load_yaml, save_yaml
 
 """
     generateRFSpikes(trange, input, rfs, λ; group_size=ones(Int,length(rfs)), dt=1e-3, background_rate=0.0)
@@ -9,7 +9,7 @@ Generates outputs resembling the activity of multiple homogeneous neuron populat
 Emits volleys of spikes at a constant rate `λ` and encodes the receptive field responses
 rfs[i](input(t)) to the input at those times in the magnitudes of the volleys.
 """
-function generateRFSpikes(trange, input, rfs, λ; group_size=ones(Int,length(rfs)), dt=1e-3, background_rate=0.0)
+function generateRFSpikes(trange, input, rfs, λ; group_size=ones(Int,length(rfs)), dt=0.0, background_rate=0.0)
     T = (trange[end]-trange[1])
 
     spikes = Vector{Vector{Vector{Float64}}}(undef, length(rfs))
@@ -24,10 +24,89 @@ function generateRFSpikes(trange, input, rfs, λ; group_size=ones(Int,length(rfs
         for j ∈ 1:group_size[i]
             background_spikes = rand(rand(Poisson(background_rate*T))) .* T .+ trange[1]
             spikes[i][j] = sort!([master_spikes[rand(length(master_spikes)) .≤ p_accept] ; background_spikes])
+            dels = Int[]
+            for (k,t) ∈ enumerate(spikes[i][j][2:end])
+                if t ≤ spikes[i][j][k] + dt
+                    push!(dels, k+1)
+                end
+            end
+            deleteat!(spikes[i][j], dels)
         end
     end
 
     return spikes
+end
+
+
+function sample_inhomogeneous_poisson(rate, trange; kwargs...)
+    spiketimes = Float64[]
+    rate_wrapped(u,p,t) = rate(t)
+    effect!(integrator) = push!(integrator.p, integrator.t)
+
+    prob = ODEProblem((du,u,p,t)->du.=0, Float64[],trange, spiketimes)
+    jump = VariableRateJump(rate_wrapped, effect!)
+    jump_prob=JumpProblem(prob, Direct(),jump)
+    solve(jump_prob,Tsit5(); kwargs...)
+
+    return spiketimes
+end
+
+function generateSpikeVolleys(trange, population_sizes, λs, volley_sizes, background_rate=0; dt_spike=0.0, dt_volley=0, kwargs...)
+    T = trange[2]-trange[1]
+    spikes = [[rand(rand(Poisson(background_rate*T))).*T.+trange[1] for i ∈ 1:num_neurons] for num_neurons ∈ population_sizes]
+    volleys = [NamedTuple{(:time,:idxs),Tuple{Float64,Vector{Int}}}[] for num_neurons ∈ population_sizes]
+    for (i,(λ,v,N)) ∈ enumerate(zip(λs, volley_sizes,population_sizes))
+
+        smp=if isa(λ,Real) 
+            rand(rand(Poisson(λ*T))).*T.+trange[1]
+        else
+            sample_inhomogeneous_poisson(λ, trange; kwargs...)
+        end
+
+        sort!(smp)
+        dels = Int[]
+        for (k,t) ∈ enumerate(smp[2:end])
+            if t ≤ smp[k] + dt_volley
+                push!(dels, k+1)
+            end
+        end
+        deleteat!(smp, dels)
+
+        for st ∈ smp
+            volley_size = if isa(v,Integer)
+                v
+            elseif isa(v,Real)
+                rand(Binomial(N, v))
+            else
+                vv = v(st)
+                if isa(vv,Integer)
+                    vv
+                else
+                    rand(Binomial(N, vv))
+                end
+            end
+            
+            idxs = sample(1:N, volley_size; replace=false)
+            for idx ∈ idxs
+                push!(spikes[i][idx], st)
+            end
+
+            push!(volleys[i], (time=st, idxs=idxs))
+        end
+        
+        foreach(sort!, spikes[i])
+        for j ∈ 1:N
+            sort!(spikes[i][j])
+            dels = Int[]
+            for (k,t) ∈ enumerate(spikes[i][j][2:end])
+                if t ≤ spikes[i][j][k] + dt_spike
+                    push!(dels, k+1)
+                end
+            end
+            deleteat!(spikes[i][j], dels)
+        end
+    end
+    return spikes, volleys
 end
 
 
@@ -37,12 +116,37 @@ end
 Plots spiketrains belonging to several different groups given by `spikes::Vector{Vector{Vector{Float64}}}` with the given `spike_width` over a time interval `trange`.
 Each group is colorcoded by the corresponding element of `colors`.
 """
-function plot_spike_raster(trange, spikes, spike_width; p=plot(), colors=1:sum(length.(spikes)), kwargs...)
+function plot_spike_raster(trange, spikes, spike_width; p=plot(), colors=1:length(spikes), highlight=[NamedTuple{(:time,:idxs),Tuple{Float64,Vector{Int}}}[] for i ∈ eachindex(spikes)], highlight_color=:red, ε=1e-3, kwargs...)
     plot!(p)
     k=0
     for (i,group) ∈ enumerate(spikes)
+        
+        # Set spike colors for each spike in each train of this group
+        spike_colors = [convert(Vector{Any},fill(colors[i], length(spiketrain))) for spiketrain ∈ group]
+        for (k,volley) ∈ enumerate(highlight[i])
+            c = if isa(highlight_color, AbstractArray)
+                highlight_color[i]
+            else
+                highlight_color
+            end
+            
+            for j ∈ volley.idxs
+                cc = if isa(c, AbstractArray)
+                    c[j]
+                else
+                    c
+                end
+                
+                # overwrite spike color if highlighted
+                for s ∈ searchsortedfirst(group[j], volley.time-ε/2):searchsortedlast(group[j], volley.time+ε/2)
+                    spike_colors[j][s] = c
+                end
+            end
+        end
+
+        # plot the actual spikes
         for (j,synapse) ∈ enumerate(group)
-            plot!([Shape([t,t+spike_width,t+spike_width,t],[k-0.45, k-0.45, k+0.45, k+0.45]) for t ∈ synapse], color=colors[i], linecolor=nothing)
+            plot!([Shape([t,t+spike_width,t+spike_width,t],[k-0.45, k-0.45, k+0.45, k+0.45]) for t ∈ synapse], color=spike_colors[j], linecolor=nothing)
             k-=1
         end
     end
