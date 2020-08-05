@@ -36,7 +36,7 @@ schema_or  = plot(framestyle=:none)
 
 filler = plot(framestyle=:none)
 
-io_curve = plot(legend=false, title="input/output", xlabel=L"r_A", ylabel=L"A(r_A)")
+io_curve = plot(legend=false, title="input/output", xlabel=L"r_A", ylabel=L"\varrho(r_A)")
 plot!(input_rates, output_rates2, color=:black, linewidth=2)
 # plot!(twinx(), input_rates, output_rates, color=:gray, linestyle=:dash, linewidth=2, legend=false)
 
