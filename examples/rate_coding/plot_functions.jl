@@ -29,10 +29,10 @@ ideal_or = (1 .-(1 .-out_rates2d.*0.1) .* (1 .-out_rates2d'.*0.1)) * in_out(r_A)
 | schema | contour   | schema | contour | schema | contour |
 """
 
-schema_soma = plot(framestyle=:none, title="segment")
-schema_seq = plot(framestyle=:none, title="N₁")
-schema_and = plot(framestyle=:none, title="N₂")
-schema_or  = plot(framestyle=:none, title="N₃")
+schema_soma = plot(framestyle=:none)
+schema_seq = plot(framestyle=:none)
+schema_and = plot(framestyle=:none)
+schema_or  = plot(framestyle=:none)
 
 filler = plot(framestyle=:none)
 
@@ -42,9 +42,9 @@ plot!(input_rates, output_rates2, color=:black, linewidth=2)
 
 contour_seq = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="'then' neuron",xlabel=L"r_B", ylabel=L"r_C")
 contourf!(input_rates2d,input_rates2d,output_rates3, levels=10)
-contour_and = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="'or' neuron",xlabel=L"r_B", ylabel=L"r_C")
+contour_or  = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="'or' neuron",xlabel=L"r_B", ylabel=L"r_C")
 contourf!(input_rates2d,input_rates2d,output_rates4, levels=10)
-contour_or  = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="'and' neuron",xlabel=L"r_B", ylabel=L"r_C")
+contour_and = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="'and' neuron",xlabel=L"r_B", ylabel=L"r_C")
 contourf!(input_rates2d,input_rates2d,output_rates5, levels=10)
 
 contour_ideal_and = plot(aspect_ratio=:equal, framesyle=:origin, colorbar=false,xlims=(0,50),ylims=(0,50), title="ideal 'and'",xlabel=L"r_B", ylabel=L"r_C")
@@ -54,7 +54,7 @@ contourf!(input_rates2d, input_rates2d, ideal_or, levels=10)
 
 
 plts = [
-    schema_soma io_curve    filler      contour_ideal_or   filler      contour_ideal_and;
+    schema_soma io_curve    filler      contour_ideal_and   filler      contour_ideal_or;
     schema_seq  contour_seq schema_and  contour_and         schema_or   contour_or
 ]
 
