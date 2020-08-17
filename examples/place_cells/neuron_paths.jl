@@ -170,4 +170,4 @@ l = @layout [
 
 p=plot(plt_path, plt_rfs, plt_spikes, plt_plateaus, plot(grid=false,frame=:none), plt_rotated, plt_offset, layout=l, size=(800,800))
 ## save
-savefig("examples/grid_cells/figures/$(name)_summary.svg")
+# savefig("examples/grid_cells/figures/$(name)_summary.svg")
