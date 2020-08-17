@@ -14,10 +14,10 @@ This package is organized as follows:
 
 # Examples
 
-There are three scripts to be run to generate figures:
+The preprint contains 4 experiments, that can be run via:
 
-* `examples/grid_cells/neuron_paths.jl`
-* `examples/grid_cells/ensemble_paths.jl` 
-* `examples/zoo/zoo.jl` 
+* `examples/place_cells/neuron_paths.jl`
+* `examples/integrator/integrator.jl` 
+* `examples/rate_coding/plot_functions.jl` 
+* `examples/rate_coding/plot_sta.jl` 
 
-Executing `run_examples.jl` will execute all of them consecutively.
