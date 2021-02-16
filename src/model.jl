@@ -1,32 +1,30 @@
 export Synapse, Segment, Neuron, Network, Input
 
-####################################
-#  Definitions of network objects  #
-const default_refrac_duration = 1.0
-const default_spike_duration = 5.0
-const default_plateau_duration = 100.0
-const default_delay = 1.0
 
 ################################################################################
 ## model component definitions                                                ##
 ################################################################################
 
-abstract type NeuronOrSegment{ID,IT} end
 abstract type AbstractComponent{ID,T,WT,IT} end
+abstract type NeuronOrSegment{ID,T,WT,IT} <: AbstractComponent{ID,T,WT,IT} end
+abstract type AbstractNetwork{ID,T,WT,IT} <:AbstractComponent{ID,T,WT,IT} end
 
-struct Segment{ID,IT} <: NeuronOrSegment{ID,IT}
+struct Segment{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
     id::ID
     θ_syn::IT
     θ_seg::Int
+    plateau_duration::T
+
     state_syn::Ref{IT}
     state_seg::Ref{Int}
     state::Ref{Symbol}
     
-    next_downstream::NeuronOrSegment{ID,IT}
-    next_upstream::Vector{Segment{ID,IT}}
+    next_downstream::NeuronOrSegment{ID,T,WT,IT}
+    next_upstream::Vector{Segment{ID,T,WT,IT}}
+    net::AbstractNetwork{ID,T,WT,IT}
 
-    function Segment(id::ID, root::NeuronOrSegment{ID,IT}; θ_syn=1, θ_seg=1) where {ID,IT}
-        this = new{ID,IT}(id, θ_syn, θ_seg, Ref(zero(IT)), Ref(0), Ref(:off), root, Segment{ID,IT}[])
+    function Segment(id::ID, root::NeuronOrSegment{ID,T,WT,IT}; θ_syn=1, θ_seg=1, plateau_duration=root.net.default_plateau_duration) where {ID,T,WT,IT}
+        this = new{ID,T,WT,IT}(id, θ_syn, θ_seg, plateau_duration, Ref(zero(IT)), Ref(0), Ref(:off), root, Segment{ID,T,WT,IT}[], root.net)
         push!(root.next_upstream, this)
         return this
     end
@@ -34,29 +32,41 @@ end
 
 struct Synapse{ID,T,WT,IT} <: AbstractComponent{ID,T,WT,IT}
     id::ID
-    target::Segment{ID,IT}
+    target::NeuronOrSegment{ID,T,WT,IT}
     delay::T
-    w::WT
+    spike_duration::T
+    weight::WT
     state::Ref{IT}
     on::Ref{Bool}
-    function Synapse(id::ID, source, target::Segment{ID,IT}; delay::T = default_delay, w::WT=one(IT)) where {ID,T,WT,IT}
-        this = new{ID,T,WT,IT}(id, target, delay, w, Ref(zero(IT)), Ref(false))
+
+    net::AbstractNetwork{ID,T,WT,IT}
+
+    function Synapse(
+                id::ID, source, target::NeuronOrSegment{ID,T,WT,IT}; 
+                delay::T = source.net.default_delay, spike_duration::T = source.net.default_spike_duration, weight::WT=one(IT)
+            ) where {ID,T,WT,IT}
+        this = new{ID,T,WT,IT}(id, target, delay, spike_duration, weight, Ref(zero(IT)), Ref(false), source.net)
         push!(source.synapses, this)
         return this
     end
 end
 
-struct Neuron{ID,T,WT,IT} <: NeuronOrSegment{ID,IT}
+struct Neuron{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
     id::ID
-    T_refrac::T
+    θ_syn::IT
     θ_seg::Int
+    T_refrac::T
+
+    state_syn::Ref{IT}
     state_seg::Ref{Int}
     state::Ref{Symbol}
-    next_upstream::Vector{Segment{ID,IT}}
+
+    next_upstream::Vector{Segment{ID,T,WT,IT}}
     synapses::Vector{Synapse{ID,T,WT,IT}}
+    net::AbstractNetwork{ID,T,WT,IT}
     
-    function Neuron(id::ID, net::AbstractComponent{ID,T,WT,IT}; T_refrac::T=default_refrac_duration) where {ID,T,WT,IT}
-        this = new{ID,T,WT,IT}(id,T_refrac,1,Ref(0),Ref(:off),Segment{ID,IT}[],Synapse{ID,T,WT,IT}[])
+    function Neuron(id::ID, net::AbstractComponent{ID,T,WT,IT}; θ_syn=one(IT), θ_seg=1, T_refrac::T=net.default_T_refrac) where {ID,T,WT,IT}
+        this = new{ID,T,WT,IT}(id,θ_syn,θ_seg,T_refrac,Ref(zero(IT)),Ref(0),Ref(:off),Segment{ID,T,WT,IT}[],Synapse{ID,T,WT,IT}[],net)
         push!(net.neurons, this)
         return this
     end
@@ -65,25 +75,39 @@ end
 struct Input{ID,T,WT,IT} <: AbstractComponent{ID,T,WT,IT}
     id::ID
     synapses::Vector{Synapse{ID,T,WT,IT}}
+    net::AbstractNetwork{ID,T,WT,IT}
 
     function Input(id::ID, net::AbstractComponent{ID,T,WT,IT}) where {ID,T,WT,IT}
-        this = new{ID,T,WT,IT}(id::ID,Synapse{ID,T,WT,IT}[])
+        this = new{ID,T,WT,IT}(id::ID,Synapse{ID,T,WT,IT}[],net)
         push!(net.inputs, this)
         return this
     end
 end
 
-struct Network{ID,T,WT,IT} <: AbstractComponent{ID,T,WT,IT}
+struct Network{ID,T,WT,IT} <: AbstractNetwork{ID,T,WT,IT}
     inputs::Vector{Input{ID,T,WT,IT}}
     neurons::Vector{Neuron{ID,T,WT,IT}}
 
-    Network(id_type::Type=Symbol, time_type::Type=Float64, weight_type::Type=Int, synaptic_input_type::Type=Int) =
-        new{id_type, time_type, weight_type, synaptic_input_type}(Input{id_type, time_type, weight_type, synaptic_input_type}[], Neuron{id_type, time_type, weight_type, synaptic_input_type}[])
+    default_T_refrac::T
+    default_delay::T
+    default_spike_duration::T
+    default_plateau_duration::T
+
+    Network(;
+        id_type::Type=Symbol, time_type::Type=Float64, weight_type::Type=Int, synaptic_input_type::Type=Int, 
+        default_T_refrac = 1.0, default_delay = 1.0, default_spike_duration = 5.0, default_plateau_duration = 100.0
+    ) = new{id_type, time_type, weight_type, synaptic_input_type}(
+            Input{id_type, time_type, weight_type, synaptic_input_type}[], 
+            Neuron{id_type, time_type, weight_type, synaptic_input_type}[],
+            default_T_refrac, default_delay, default_spike_duration, default_plateau_duration
+        )
 end
 
 ################################################################################
 ## model behavior                                                             ##
 ################################################################################
+
+
 """Turn all upstream branches on."""
 function backprop_on!(s::Segment)
     # only backprop if the segment is currently off; if it's on or clamped, we don't need to do anything
@@ -112,7 +136,8 @@ function backprop_off!(s::Segment)
 end
 
 """Check if this segment was just turned on; if so, backpropagate!"""
-function maybe_on!(s::Segment, queue!)::Union{Nothing,Segment}
+function trigger!(s::Segment, ev::Val{:activate}, queue!, t)
+    @debug "$(t): Triggered event $(ev) on object $(s)"
     # if the segment was already on or clamped, do nothing
     # if the segment is currently off, but the plateau conditions are satisfied, turn on
     if s.state[] == :off && s.state_syn[] >= s.θ_syn && (isempty(s.next_upstream) || s.state_seg[] >= s.θ_seg)
@@ -126,58 +151,19 @@ function maybe_on!(s::Segment, queue!)::Union{Nothing,Segment}
         s.next_downstream.state_seg[] += 1
 
         # turning on this segment might have also turned on the next_downstream segment
-        maybe_on!(s.next_downstream, queue!)
+        trigger!(s.next_downstream, ev, queue!, t)
 
         # if we are still on (and not clamped by a downstream segment), don't forget to turn off this segment!
         if s.state[] == :on
-            queue!(:plateau_end, default_plateau_duration, s)
+            queue!(:deactivate, s.plateau_duration, s)
         end
     end
     return nothing
-end
-
-"""Check if this neuron was triggered to spike"""
-function maybe_on!(n::Input, queue!)
-    # if the neuron was off but enough segments are on, trigger a spike
-    # trigger all synapses
-    for s in n.synapses
-        queue!(:spike_start, s.delay, s)
-    end
-    return nothing
-end
-
-"""Check if this neuron was re-triggered to spike after refractoriness"""
-function maybe_off!(n::Input, queue!)
-    nothing
-end
-
-"""Check if this neuron was triggered to spike"""
-function maybe_on!(n::Neuron, queue!)
-    # if the neuron was off but enough segments are on, trigger a spike
-    if n.state[] == :off  && n.state_seg[] >= n.θ_seg
-        n.state[] == :refractory
-
-        # trigger all synapses
-        for s in n.synapses
-            queue!(:spike_start, s.delay, s)
-        end
-
-        # don't forget to turn of :refractoriness
-        queue!(:refractory_end, n.T_refrac, n)
-    end
-    return nothing
-end
-
-"""Check if this neuron was re-triggered to spike after refractoriness"""
-function maybe_off!(n::Neuron, queue!)
-    n.state[] = :off
-
-    # check if the neuron should spike again, right away
-    maybe_on!(n, queue!)
 end
 
 """Check if this segment should switch off, since its plateau has timed out"""
-function maybe_off!(s::Segment, queue!)
+function trigger!(s::Segment, ev::Val{:deactivate}, queue!, t)
+    @debug "$(t): Triggered event $(ev) on object $(s)"
     # if the segment is clamped or off, do nothing
     # if the segment is currently on by itself, turn off
     if s.state[]==:on
@@ -190,32 +176,82 @@ function maybe_off!(s::Segment, queue!)
     return nothing
 end
 
+
+"""Check if this Input was triggered to spike"""
+function trigger!(n::Input, ev::Val{:activate}, queue!, t)
+    @debug "$(t): Triggered event $(ev) on object $(n)"
+    for s in n.synapses
+        queue!(:activate, s.delay, s)
+    end
+    return nothing
+end
+
+"""Check if this neuron was triggered to spike"""
+function trigger!(n::Neuron, ev::Val{:activate}, queue!, t)
+    @debug "$(t): Triggered event $(ev) on object $(n)"
+    # if the neuron was off but enough segments are on, trigger a spike
+    if n.state[] == :off  && n.state_syn[] >= n.θ_syn && (isempty(n.next_upstream) || n.state_seg[] >= n.θ_seg)
+        n.state[] == :refractory
+
+        # trigger all synapses
+        for s in n.synapses
+            queue!(:activate, s.delay, s)
+        end
+
+        # don't forget to turn of :refractoriness
+        queue!(:deactivate, n.T_refrac, n)
+    end
+    return nothing
+end
+
+"""Check if this neuron was re-triggered to spike after refractoriness"""
+function trigger!(n::Neuron, ev::Val{:deactivate}, queue!, t)
+    @debug "$(t): Triggered event $(ev) on object $(n)"
+    n.state[] = :off
+
+    # check if the neuron should spike again, right away
+    trigger!(n, Val(:activate), queue!, t)
+end
+
 """Check if an incoming spike should trigger an EPSP"""
-function maybe_on!(s::Synapse, queue!)
+function trigger!(s::Synapse, ev::Val{:activate}, queue!, t)
+    @debug "$(t): Triggered event $(ev) on object $(s)"
     if ~s.on[]
         s.on[] = true
         # set the synapse's state for this spike
-        s.state[] = s.w
+        s.state[] = s.weight
         # inform the target segment about this new EPSP
         s.target.state_syn[] += s.state[]
 
         # don't forget to turn off EPSP
-        queue!(:spike_end, default_spike_duration, s)
+        queue!(:deactivate, s.spike_duration, s)
 
         # this EPSP might have triggered a plateau in the target
-        maybe_on!(s.target, queue!)
+        trigger!(s.target, Val(:activate), queue!, t)
     end
 end
 
 """Turn off the EPSP"""
-function maybe_off!(s::Synapse, queue!)
+function trigger!(s::Synapse, ev::Val{:deactivate}, queue!, t)
+    @debug "$(t): Triggered event $(ev) on object $(s)"
     # only update if the synapse isn't already off (shouldn't happen!)
     if s.on[]
         # inform the target, that the EPSP is over
         s.target.state_syn[] -= s.state[]
         # reset the synapse's state
-        s.state[] = zero(s.w)
+        s.state[] = zero(s.weight)
         s.on[] = false
     end
     return nothing
 end
+
+
+################################################################################
+## pretty printing                                                            ##
+################################################################################
+
+Base.show(io::IO, x::Network)  = print(io, "Network with $(length(x.inputs)) inputs and $(length(x.neurons)) neurons")
+Base.show(io::IO, x::Neuron)   = print(io, "Neuron '$(x.id)' with $(length(x.next_upstream)) child-segments and $(length(x.synapses)) outgoing synapses")
+Base.show(io::IO, x::Input)    = print(io, "Input '$(x.id)' with $(length(x.synapses)) outgoing synapses")
+Base.show(io::IO, x::Segment)  = print(io, "Segment '$(x.id)' with $(length(x.next_upstream)) child-segments")
+Base.show(io::IO, x::Synapse)  = print(io, "Synapse '$(x.id)' (connects to $(x.target.id))")
