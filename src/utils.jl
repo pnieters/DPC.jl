@@ -194,12 +194,13 @@ function load_network(YAML_file=nothing; YAML_source=nothing, id_type=Symbol, ti
     
     # get basic blocks
     inputs = pop!(obj, "inputs", [])
+    outputs = pop!(obj, "outputs", [])
     neurons = pop!(obj, "neurons", [])
     synapses = pop!(obj, "synapses", [])
 
     # get default parameters
     kwargs = Dict{id_type,Any}()
-    parse_kwarg!(kwargs, obj, :default_T_refrac, time_type, "T_refrac")
+    parse_kwarg!(kwargs, obj, :default_refractory_duration, time_type, "refractory_duration")
     parse_kwarg!(kwargs, obj, :default_delay, time_type, "delay")
     parse_kwarg!(kwargs, obj, :default_spike_duration, time_type, "spike_duration")
     parse_kwarg!(kwargs, obj, :default_plateau_duration, time_type, "plateau_duration")
@@ -241,7 +242,7 @@ function load_network(YAML_file=nothing; YAML_source=nothing, id_type=Symbol, ti
         id = id_type(pop!(neuron, "id"))
         
         kwargs = Dict{Symbol,Any}()
-        parse_kwarg!(kwargs, neuron, :T_refrac, time_type)
+        parse_kwarg!(kwargs, neuron, :refractory_duration, time_type)
         parse_kwarg!(kwargs, neuron, :θ_syn, synaptic_input_type)
         parse_kwarg!(kwargs, neuron, :θ_seg, Int)
 
@@ -262,6 +263,12 @@ function load_network(YAML_file=nothing; YAML_source=nothing, id_type=Symbol, ti
         id = id_type(input["id"])
         inp = Input(id, net)
         all_segments[id] = inp
+    end
+
+    for output in outputs
+        id = id_type(output["id"])
+        out = Output(id, net)
+        all_segments[id] = out
     end
 
     for synapse in synapses
@@ -297,6 +304,7 @@ function save_network(net::Network{id_type, time_type, weight_type, synaptic_inp
     
     # create basic blocks
     data["inputs"] = []
+    data["outputs"] = []
     data["neurons"] = []
     data["synapses"] = []
     
@@ -330,7 +338,7 @@ function save_network(net::Network{id_type, time_type, weight_type, synaptic_inp
     for neuron in net.neurons
         branch = OrderedDict{String,Any}()
         branch["id"] = neuron.id
-        branch["T_refrac"] = neuron.T_refrac
+        branch["refractory_duration"] = neuron.refractory_duration
         branch["θ_syn"] = neuron.θ_syn
         branch["θ_seg"] = neuron.θ_seg
         
@@ -357,6 +365,12 @@ function save_network(net::Network{id_type, time_type, weight_type, synaptic_inp
             push!(data["synapses"], parse_synapse(input, synapse))
         end
         push!(data["inputs"],branch)
+    end
+
+    for output in net.outputs
+        branch = OrderedDict{String,Any}()
+        branch["id"] = output.id
+        push!(data["outputs"],branch)
     end
 
     return if filename === nothing

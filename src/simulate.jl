@@ -11,13 +11,22 @@ end
 Base.isless(ev1::Event, ev2::Event) = isless(ev1.t, ev2.t)
 
 ##############################
-trigger!(obj::O,T,x,t) where {O} = @warn "No handler implemented for event-type $(T) on object-type $(O)!"
+trigger!(t,T,obj::O,x,y) where {O} = @warn "No handler implemented for event-type $(T) on object-type $(O)!"
+function Logger(::T) where T
+    @warn "No output_logger defined for type $(T)!"
+    function output_logger(args...)
+    end
+end
 
-function simulate!(sim_state, inputs::Vector{Event{T,Symbol,<:Any}}, tstop=Inf; callback! = x->nothing, show_progress=true) where T
+function simulate!(net, inputs::Vector{Event{T,Symbol,<:Any}}, tstop=Inf; logger! = Logger(net), show_progress=true, reset=true) where T
     event_queue = BinaryMinHeap(inputs)
     sim_clock = Ref(zero(T))
 
-    queue!(id, Δt, obj) = push!(event_queue, Event(sim_clock[] + Δt, id, obj))
+    queue!(Δt, id, obj) = push!(event_queue, Event(sim_clock[] + Δt, id, obj))
+
+    if reset
+        reset!(net)
+    end
 
     p=nothing
     if show_progress
@@ -33,13 +42,11 @@ function simulate!(sim_state, inputs::Vector{Event{T,Symbol,<:Any}}, tstop=Inf; 
         next_event = pop!(event_queue)
         sim_clock[] = next_event.t
         if sim_clock[] > tstop
-            return nothing
+            break
         end
 
-        trigger!(next_event.value, Val(next_event.id), queue!, sim_clock[])
-
-        callback!(next_event)
+        trigger!(sim_clock[], Val(next_event.id), next_event.value, queue!, logger!)
     end
 
-    return nothing
+    return logger!
 end
