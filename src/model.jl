@@ -55,6 +55,7 @@ struct Synapse{ID,T,WT,IT} <: AbstractSynapse{ID,T,WT,IT}
         return this
     end
 end
+sample_spike_magnitude(weight)=weight
 
 struct Neuron{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
     id::ID
@@ -310,13 +311,15 @@ function maybe_off!(obj::Neuron, now, queue!, logger!)
     maybe_on!(obj::Neuron, now, queue!, logger!)
 end
 
+
+
 """Check if an incoming spike should trigger an EPSP"""
 function on!(obj::Synapse, now, queue!, logger!)
     if ~obj.state[]
         @debug "$(now): Triggered synapse $(obj.id) and started an EPSP!"
         obj.state[] = true
         # set the synapse's state for this spike
-        obj.magnitude[] = obj.weight
+        obj.magnitude[] = sample_spike_magnitude(obj.weight)
         # inform the target segment about this new EPSP
         obj.target.state_syn[] += obj.magnitude[]
         logger!(now, :epsp_starts, obj.id, obj.state[])
@@ -324,8 +327,15 @@ function on!(obj::Synapse, now, queue!, logger!)
         # don't forget to turn off EPSP
         queue!(Event(:epsp_ends, now, now+obj.spike_duration, obj))
 
-        # this EPSP might have triggered a plateau in the target
-        maybe_on!(obj.target, now,  queue!, logger!)
+        # if the spike was excitatory ...
+        if obj.magnitude[] > zero(obj.magnitude[])
+            # ... this EPSP might have triggered a plateau in the target
+            maybe_on!(obj.target, now,  queue!, logger!)
+        # else if it was inhibitory ...
+        elseif obj.magnitude[] < zero(obj.magnitude[])
+            # this EPSP may have destroyed any ongoing plateau
+            maybe_off!(obj.target, now,  queue!, logger!)
+        end
     else
         @debug "$(now): Triggered synapse $(obj.id), but didn't start an EPSP!"
     end
@@ -339,10 +349,18 @@ function off!(obj::Synapse, now, queue!, logger!)
         @debug "$(now): Triggered synapse $(obj.id) and turned EPSP off!"
         # inform the target, that the EPSP is over
         obj.target.state_syn[] -= obj.magnitude[]
+
+        # if the spike was inhibitory ...
+        if obj.magnitude[] < zero(obj.magnitude[])
+            # this EPSP's end may trigger a rebound spike
+            maybe_on!(obj.target, now,  queue!, logger!)
+        end
+
         # reset the synapse's state
         obj.magnitude[] = zero(obj.magnitude[])
         obj.state[] = false
         logger!(now, :epsp_ends, obj.id, obj.state[])
+        
     else
         @debug "$(now): Triggered synapse $(obj.id), but didn't turn EPSP off!"
     end
