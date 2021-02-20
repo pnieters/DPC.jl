@@ -17,9 +17,9 @@ using ADSP, Test
     
     (net,objects) = load_network(YAML_source=config)
     
-    inp=Event{Float64,Symbol,<:Any}[Event(1.0,:activate,objects[:i1])]
+    inp=[Event(:input_spikes, 0.0, 1.0, objects[:i1])]
 
-    logger=simulate!(net, inp, 10.0; show_progress=false)
+    logger=simulate!(net, inp, 10.0; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
     # should spike once every 1ms for the whole spike duration of 5ms with 2ms delay 
     # (due to the 2 synapses) after the input spike at 1ms, i.e. after 3ms
     @test length(logger.t)==5 && logger.t ≈ [3.0,4.0,5.0,6.0,7.0]
@@ -40,8 +40,8 @@ using ADSP, Test
     """
     
     (net,objects) = load_network(YAML_source=config)
-    inp=Event{Float64,Symbol,<:Any}[Event(1.0,:activate,objects[:i1])]
-    logger=simulate!(net, inp, 10.0; show_progress=false)
+    inp=[Event(:input_spikes, 0.0, 1.0, objects[:i1])]
+    logger=simulate!(net, inp, 10.0; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
     @test length(logger.t)==1 && logger.t ≈ [3.0]
 end
 
@@ -71,12 +71,12 @@ end
     """
     
     (net,objects) = load_network(YAML_source=config)
-    inp=Event{Float64,Symbol,<:Any}[Event(1.0,:activate,objects[:i1])]
-    logger=simulate!(net, inp, 10.0; show_progress=false)
+    inp=[Event(:input_spikes, 0.0, 1.0, objects[:i1])]
+    logger=simulate!(net, inp, 10.0; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
     @test length(logger.t)==1 && logger.t ≈ [3.0]
-    logger=simulate!(net, inp, 10.0; show_progress=false, reset=false)
+    logger=simulate!(net, inp, 10.0; show_progress=false, reset=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
     @test isempty(logger.t)
-    logger=simulate!(net, inp, 10.0; show_progress=false)
+    logger=simulate!(net, inp, 10.0; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
     @test length(logger.t)==1 && logger.t ≈ [3.0]
 end
 
@@ -112,57 +112,57 @@ end
   cascade_trials=[
     (
       summary="Slow sequence in wrong direction",
-      input=Event{Float64,Symbol,<:Any}[
-        Event(1.0,:activate,objects[:i1]), # should do nothing
-        Event(2.0,:activate,objects[:i2]), # should do nothing
-        Event(3.0,:activate,objects[:i3]), # should do nothing
-        Event(4.0,:activate,objects[:i4]), # should trigger a plateau on s3, but no spike!
+      input=[
+        Event(:input_spikes, 0.0, 1.0, objects[:i1]), # should do nothing
+        Event(:input_spikes, 0.0, 2.0, objects[:i2]), # should do nothing
+        Event(:input_spikes, 0.0, 3.0, objects[:i3]), # should do nothing
+        Event(:input_spikes, 0.0, 4.0, objects[:i4]), # should trigger a plateau on s3, but no spike!
       ],
       output=[]
     ),
     (
       summary="Re-triggering the neuron",
-      input=Event{Float64,Symbol,<:Any}[
-        Event(0.0,:activate,objects[:i1]), # should do nothing
-        Event(0.2,:activate,objects[:i1]), # should do nothing
-        Event(0.4,:activate,objects[:i1]), # should do nothing
+      input=[
+        Event(:input_spikes, 0.0, 0.0, objects[:i1]), # should do nothing
+        Event(:input_spikes, 0.0, 0.2, objects[:i1]), # should do nothing
+        Event(:input_spikes, 0.0, 0.4, objects[:i1]), # should do nothing
       ],
       output=[]
     ),
     (
       summary="Quick sequence in wrong direction",
-      input=Event{Float64,Symbol,<:Any}[
-        Event(0.0,:activate,objects[:i1]), # should do nothing
-        Event(0.2,:activate,objects[:i2]), # should do nothing
-        Event(0.4,:activate,objects[:i3]), # should do nothing
-        Event(0.6,:activate,objects[:i4]), # triggers a spike at 1.6 -> spike on syn5 at 2.6
+      input=[
+        Event(:input_spikes, 0.0, 0.0, objects[:i1]), # should do nothing
+        Event(:input_spikes, 0.0, 0.2, objects[:i2]), # should do nothing
+        Event(:input_spikes, 0.0, 0.4, objects[:i3]), # should do nothing
+        Event(:input_spikes, 0.0, 0.6, objects[:i4]), # triggers a spike at 1.6 -> spike on syn5 at 2.6
       ],
       output=[2.6]
     ),
     (
       summary="Slow sequence in correct direction",
-      input=Event{Float64,Symbol,<:Any}[
-        Event(0.0,:activate,objects[:i4]), # should do nothing
-        Event(2.0,:activate,objects[:i3]), # should do nothing
-        Event(4.0,:activate,objects[:i2]), # should do nothing
-        Event(6.0,:activate,objects[:i1]), # trigger a spike at 7.0 -> spike on syn5 at 8.0
+      input=[
+        Event(:input_spikes, 0.0, 0.0, objects[:i4]), # should do nothing
+        Event(:input_spikes, 0.0, 2.0, objects[:i3]), # should do nothing
+        Event(:input_spikes, 0.0, 4.0, objects[:i2]), # should do nothing
+        Event(:input_spikes, 0.0, 6.0, objects[:i1]), # trigger a spike at 7.0 -> spike on syn5 at 8.0
         ],
       output=[8.0]
     ),
     (
       summary="Too slow sequence in correct direction",
-      input=Event{Float64,Symbol,<:Any}[
-        Event(0.0,:activate,objects[:i4]), # should do nothing
-        Event(2.0,:activate,objects[:i3]), # should do nothing
-        Event(4.0,:activate,objects[:i2]), # should do nothing
-        Event(10.0,:activate,objects[:i1]), # should do nothing
+      input=[
+        Event(:input_spikes, 0.0, 0.0, objects[:i4]), # should do nothing
+        Event(:input_spikes, 0.0, 2.0, objects[:i3]), # should do nothing
+        Event(:input_spikes, 0.0, 4.0, objects[:i2]), # should do nothing
+        Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should do nothing
         ],
       output=[]
     )      
   ]
 
   @testset "Test cascade: $(trial.summary)" for trial in cascade_trials
-    logger=simulate!(net, trial.input; show_progress=false)
+    logger=simulate!(net, trial.input; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
     @test length(logger.t) == length(trial.output) && logger.t ≈ Vector{Float64}(trial.output)
   end
 end
@@ -195,32 +195,32 @@ end
     trials=[
       (
         summary="Branch 1",
-        input=Event{Float64,Symbol,<:Any}[
-          Event(0.0,:activate,objects[:i2]), # should do nothing
-          Event(1.0,:activate,objects[:i1]), # should trigger a spike!
+        input=[
+          Event(:input_spikes, 0.0, 0.0, objects[:i2]), # should do nothing
+          Event(:input_spikes, 0.0, 1.0, objects[:i1]), # should trigger a spike!
         ],
         output=[3.0]
       ),
       (
         summary="Branch 2",
-        input=Event{Float64,Symbol,<:Any}[
-          Event(0.0,:activate,objects[:i3]), # should do nothing
-          Event(1.0,:activate,objects[:i1]), # should trigger a spike!
+        input=[
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # should do nothing
+          Event(:input_spikes, 0.0, 1.0, objects[:i1]), # should trigger a spike!
         ],
         output=[3.0]
       ),
       (
         summary="No branch",
-        input=Event{Float64,Symbol,<:Any}[
-          Event(1.0,:activate,objects[:i3]), # should do nothing
-          Event(2.0,:activate,objects[:i2]), # should not trigger a spike!
+        input=[
+          Event(:input_spikes, 0.0, 1.0, objects[:i3]), # should do nothing
+          Event(:input_spikes, 0.0, 2.0, objects[:i2]), # should not trigger a spike!
         ],
         output=[]
       ),
     ]
     
     @testset "Test cascade: $(trial.summary)" for trial in trials
-        logger=simulate!(net, trial.input; show_progress=false)
+        logger=simulate!(net, trial.input; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
         @test length(logger.t) == length(trial.output) && logger.t ≈ Vector{Float64}(trial.output)
     end
 end

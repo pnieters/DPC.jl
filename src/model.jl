@@ -6,10 +6,12 @@ using DataFrames: DataFrame
 ## model component definitions                                                ##
 ################################################################################
 
+
 abstract type AbstractComponent{ID,T,WT,IT} end
 abstract type NeuronOrSegmentOrOutput{ID,T,WT,IT} <: AbstractComponent{ID,T,WT,IT} end
 abstract type NeuronOrSegment{ID,T,WT,IT} <: NeuronOrSegmentOrOutput{ID,T,WT,IT} end
 abstract type AbstractNetwork{ID,T,WT,IT} <:AbstractComponent{ID,T,WT,IT} end
+abstract type AbstractSynapse{ID,T,WT,IT} <:AbstractComponent{ID,T,WT,IT} end
 
 struct Segment{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
     id::ID
@@ -19,27 +21,28 @@ struct Segment{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
 
     state_syn::Ref{IT}
     state_seg::Ref{Int}
-    state::Ref{Symbol}
+    last_activated::Ref{T}
+    state::Ref{Bool}
     
     next_downstream::NeuronOrSegment{ID,T,WT,IT}
     next_upstream::Vector{Segment{ID,T,WT,IT}}
     net::AbstractNetwork{ID,T,WT,IT}
 
     function Segment(id::ID, root::NeuronOrSegment{ID,T,WT,IT}; θ_syn=1, θ_seg=1, plateau_duration=root.net.default_plateau_duration) where {ID,T,WT,IT}
-        this = new{ID,T,WT,IT}(id, θ_syn, θ_seg, plateau_duration, Ref(zero(IT)), Ref(0), Ref(:off), root, Segment{ID,T,WT,IT}[], root.net)
+        this = new{ID,T,WT,IT}(id, θ_syn, θ_seg, plateau_duration, Ref(zero(IT)), Ref(0), Ref(zero(T)), Ref(false), root, Segment{ID,T,WT,IT}[], root.net)
         push!(root.next_upstream, this)
         return this
     end
 end
 
-struct Synapse{ID,T,WT,IT} <: AbstractComponent{ID,T,WT,IT}
+struct Synapse{ID,T,WT,IT} <: AbstractSynapse{ID,T,WT,IT}
     id::ID
     target::NeuronOrSegmentOrOutput{ID,T,WT,IT}
     delay::T
     spike_duration::T
     weight::WT
-    state::Ref{IT}
-    on::Ref{Bool}
+    magnitude::Ref{IT}
+    state::Ref{Bool}
 
     net::AbstractNetwork{ID,T,WT,IT}
 
@@ -61,14 +64,14 @@ struct Neuron{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
 
     state_syn::Ref{IT}
     state_seg::Ref{Int}
-    state::Ref{Symbol}
+    state::Ref{Bool}
 
     next_upstream::Vector{Segment{ID,T,WT,IT}}
     synapses::Vector{Synapse{ID,T,WT,IT}}
     net::AbstractNetwork{ID,T,WT,IT}
     
     function Neuron(id::ID, net::AbstractComponent{ID,T,WT,IT}; θ_syn=one(IT), θ_seg=1, refractory_duration::T=net.default_refractory_duration) where {ID,T,WT,IT}
-        this = new{ID,T,WT,IT}(id,θ_syn,θ_seg,refractory_duration,Ref(zero(IT)),Ref(0),Ref(:off),Segment{ID,T,WT,IT}[],Synapse{ID,T,WT,IT}[],net)
+        this = new{ID,T,WT,IT}(id,θ_syn,θ_seg,refractory_duration,Ref(zero(IT)),Ref(0), Ref(false),Segment{ID,T,WT,IT}[],Synapse{ID,T,WT,IT}[],net)
         push!(net.neurons, this)
         return this
     end
@@ -120,8 +123,48 @@ struct Network{ID,T,WT,IT} <: AbstractNetwork{ID,T,WT,IT}
 end
 
 ################################################################################
+## default simulation handling                                                ##
+################################################################################
+
+struct Event{T, V}
+    type::Symbol
+    created::T
+    t::T
+    target::V
+end
+Base.isless(ev1::Event, ev2::Event) = isless(ev1.t, ev2.t)
+
+function handle!(event::Event, queue!, logger!)
+    if event.type == :input_spikes
+        # definitely turn input on 
+        # -> this will trigger all synapses to fire
+        on!(event.target, event.t, queue!, logger!)
+    elseif event.type == :epsp_starts
+        # definitively turn synapse on -> this may trigger a cascade of segements / soma to emit plateaus / a spike
+        on!(event.target, event.t, queue!, logger!)
+    elseif event.type == :epsp_ends
+        # definitively turn synapse off
+        off!(event.target, event.t, queue!, logger!)
+    elseif event.type == :plateau_ends
+        # if the event is not relevant any more (the current plateau is not the one that triggered this event), ignore
+        # if the event is still relevant, definitely turn the segment off 
+        # -> this may also turn off upstream segments
+        if event.created >= event.target.last_activated[]
+            maybe_off!(event.target, event.t, queue!, logger!)
+        end
+    elseif event.type == :refractory_period_ends
+        # definitively enable neuron to fire again
+        # -> this may also trigger another spike rightaway
+        # -> a spike will trigger all synapses to fire
+        maybe_off!(event.target, event.t, queue!, logger!)
+    end
+    nothing
+end
+
+################################################################################
 ## model behavior                                                             ##
 ################################################################################
+
 function reset!(net::Network{ID,T,WT,IT}) where {ID,T,WT,IT}
     foreach(reset!, net.inputs)
     foreach(reset!, net.outputs)
@@ -131,7 +174,7 @@ end
 function reset!(x::Neuron{ID,T,WT,IT}) where {ID,T,WT,IT}
     x.state_syn[] = zero(IT)
     x.state_seg[] = 0
-    x.state[] = :off
+    x.state[] = false
 
     foreach(reset!, x.synapses)
     foreach(reset!, x.next_upstream)
@@ -140,7 +183,8 @@ end
 function reset!(x::Segment{ID,T,WT,IT}) where {ID,T,WT,IT}
     x.state_syn[] = zero(IT)
     x.state_seg[] = 0
-    x.state[] = :off
+    x.state[] = false
+    x.last_activated[]=zero(T)
 
     foreach(reset!, x.next_upstream)
 end
@@ -154,151 +198,161 @@ function reset!(x::Output{ID,T,WT,IT}) where {ID,T,WT,IT}
 end
 
 function reset!(x::Synapse{ID,T,WT,IT}) where {ID,T,WT,IT}
-    x.on[]=false
-    x.state[]=zero(IT)
+    x.state[]=false
+    x.magnitude[]=zero(IT)
 end
 
 """Turn all upstream branches on."""
-function backprop_on!(s::Segment)
-    # only backprop if the segment is currently off; if it's on or clamped, we don't need to do anything
-    if s.state[] == :off
-        for s_up in s.next_upstream
-            backprop_on!(s_up)
-        end
+function backprop_on!(obj::Segment, now, logger!)
+    for s_up in obj.next_upstream
+        backprop_on!(s_up, now, logger!)
     end
 
     # this segment is now clamped to the downstream and all upstream branches are on
-    s.state_seg[] = length(s.next_upstream)
-    s.state[] = :clamped
+    obj.state_seg[] = length(obj.next_upstream)
+    obj.state[] = true
+    obj.last_activated[] = now
+    logger!(now, :backprop_plateau_starts, obj.id, obj.state[])
     return nothing
 end
 
 """Turn all upstream branches off"""
-function backprop_off!(s::Segment)
-    for s_up in s.next_upstream
-        backprop_off!(s_up)
+function backprop_off!(obj::Segment, now, logger!)
+    for s_up in obj.next_upstream
+        backprop_off!(s_up, now, logger!)
     end
 
     # this segment is now off all so are all upstream branches
-    s.state_seg[] = 0
-    s.state[] = :off
+    obj.state_seg[] = 0
+    obj.state[] = false
+    logger!(now, :backprop_plateau_ends, obj.id, obj.state[])
     return nothing
 end
 
 """Check if this segment was just turned on; if so, backpropagate!"""
-function trigger!( t,  ev::Val{:activate}, s::Segment,  queue!, logger!)
-    @debug "$(t): Triggered event $(ev) on object $(s)"
-    # if the segment was already on or clamped, do nothing
+function maybe_on!(obj::Segment, now, queue!, logger!)
     # if the segment is currently off, but the plateau conditions are satisfied, turn on
-    if s.state[] == :off && s.state_syn[] >= s.θ_syn && (isempty(s.next_upstream) || s.state_seg[] >= s.θ_seg)
+    return if ~obj.state[] && obj.state_syn[] >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state_seg[] >= obj.θ_seg)
+        @debug "$(now): Triggered segment $(obj.id) and it turned on!"
         # propagate to the upstream segments
-        for s_up in s.next_upstream
-            backprop_on!(s_up)
-        end
-
-        # the segment is now on
-        s.state[] = :on
-        s.next_downstream.state_seg[] += 1
+        backprop_on!(obj, now, logger!)
+        logger!(now, :plateau_starts, obj.id, obj.state[])
 
         # turning on this segment might have also turned on the next_downstream segment
-        trigger!( t,  ev, s.next_downstream,  queue!, logger!)
+        obj.next_downstream.state_seg[] += 1
+        cascaded = maybe_on!(obj.next_downstream, now, queue!, logger!)
 
-        # if we are still on (and not clamped by a downstream segment), don't forget to turn off this segment!
-        if s.state[] == :on
-            queue!(s.plateau_duration, :deactivate, s)
+        # The last segment turns the lights off!
+        if ~cascaded || isa(obj.next_downstream, Neuron)
+            queue!(Event(:plateau_ends, now, now+obj.plateau_duration, obj))
         end
+        true
+    else
+        @debug "$(now): Triggered segment $(obj.id), but it didn't turn on!"
+        false
     end
-    return nothing
 end
 
 """Check if this segment should switch off, since its plateau has timed out"""
-function trigger!( t,  ev::Val{:deactivate}, s::Segment,  queue!, logger!)
-    @debug "$(t): Triggered event $(ev) on object $(s)"
-    # if the segment is clamped or off, do nothing
-    # if the segment is currently on by itself, turn off
-    if s.state[]==:on
+function maybe_off!(obj::Segment, now, queue!, logger!)
+    # if the segment is currently on, turn off
+    if obj.state[]
+        @debug "$(now): Triggered segment $(obj.id) and it turned off!"
         # propagate this info upwards
-        backprop_off!(s)
+        backprop_off!(obj, now, logger!)
+        logger!(now, :plateau_ends, obj.id, obj.state[])
 
         # update next_downstream segment
-        s.next_downstream.state_seg[] -= 1
+        obj.next_downstream.state_seg[] -= 1
+    else
+        @debug "$(now): Triggered segment $(obj.id), but it didn't turn off!"
     end
     return nothing
 end
 
 
 """Check if this Input was triggered to spike"""
-function trigger!( t,  ev::Val{:activate}, n::Input,  queue!, logger!)
-    @debug "$(t): Triggered event $(ev) on object $(n)"
-    for s in n.synapses
-        queue!(s.delay, :activate, s)
+function on!(obj::Input, now, queue!, logger!)
+    @debug "$(now): Triggered input $(obj.id) to fire!"
+    for s in obj.synapses
+        queue!(Event(:epsp_starts, now, now+s.delay, s))
     end
     return nothing
 end
 
 """Check if this neuron was triggered to spike"""
-function trigger!( t,  ev::Val{:activate}, n::Neuron,  queue!, logger!)
-    @debug "$(t): Triggered event $(ev) on object $(n)"
-    # if the neuron was off but enough segments are on, trigger a spike
-    if n.state[] == :off  && n.state_syn[] >= n.θ_syn && (isempty(n.next_upstream) || n.state_seg[] >= n.θ_seg)
-        n.state[] == :refractory
+function maybe_on!(obj::Neuron, now, queue!, logger!)
+    if ~obj.state[]  && obj.state_syn[] >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state_seg[] >= obj.θ_seg)
+        @debug "$(now): Triggered neuron $(obj.id) and it fired a spike!"
+        obj.state[] == true
+        logger!(now, :spikes, obj.id, obj.state[])
 
         # trigger all synapses
-        for s in n.synapses
-            queue!(s.delay, :activate, s)
+        for s in obj.synapses
+            queue!(Event(:epsp_starts, now, now+s.delay, s))
         end
 
-        # don't forget to turn of :refractoriness
-        queue!(n.refractory_duration, :deactivate, n)
+        # don't forget to recover from refractory period
+        queue!(Event(:refractory_period_ends, now, now+obj.refractory_duration, obj))
+    else
+        @debug "$(now): Triggered neuron $(obj.id), but didn't fire!"
     end
-    return nothing
+    return false
 end
 
 """Check if this neuron was re-triggered to spike after refractoriness"""
-function trigger!( t,  ev::Val{:deactivate}, n::Neuron,  queue!, logger!)
-    @debug "$(t): Triggered event $(ev) on object $(n)"
-    n.state[] = :off
+function maybe_off!(obj::Neuron, now, queue!, logger!)
+    @debug "$(now): Neuron $(obj.id) came out of refractoriness!"
+    obj.state[] = false
+    logger!(now, :refractory_period_ends, obj.id, obj.state[])
 
     # check if the neuron should spike again, right away
-    trigger!( t,  Val(:activate), n,  queue!, logger!)
+    maybe_on!(obj::Neuron, now, queue!, logger!)
 end
 
 """Check if an incoming spike should trigger an EPSP"""
-function trigger!( t,  ev::Val{:activate}, s::Synapse,  queue!, logger!)
-    @debug "$(t): Triggered event $(ev) on object $(s)"
-    if ~s.on[]
-        s.on[] = true
+function on!(obj::Synapse, now, queue!, logger!)
+    if ~obj.state[]
+        @debug "$(now): Triggered synapse $(obj.id) and started an EPSP!"
+        obj.state[] = true
         # set the synapse's state for this spike
-        s.state[] = s.weight
+        obj.magnitude[] = obj.weight
         # inform the target segment about this new EPSP
-        s.target.state_syn[] += s.state[]
+        obj.target.state_syn[] += obj.magnitude[]
+        logger!(now, :epsp_starts, obj.id, obj.state[])
 
         # don't forget to turn off EPSP
-        queue!(s.spike_duration, :deactivate, s)
+        queue!(Event(:epsp_ends, now, now+obj.spike_duration, obj))
 
         # this EPSP might have triggered a plateau in the target
-        trigger!( t,  Val(:activate), s.target,  queue!, logger!)
-    end
-end
-
-"""Turn off the EPSP"""
-function trigger!( t,  ev::Val{:deactivate}, s::Synapse,  queue!, logger!)
-    @debug "$(t): Triggered event $(ev) on object $(s)"
-    # only update if the synapse isn't already off (shouldn't happen!)
-    if s.on[]
-        # inform the target, that the EPSP is over
-        s.target.state_syn[] -= s.state[]
-        # reset the synapse's state
-        s.state[] = zero(s.weight)
-        s.on[] = false
+        maybe_on!(obj.target, now,  queue!, logger!)
+    else
+        @debug "$(now): Triggered synapse $(obj.id), but didn't start an EPSP!"
     end
     return nothing
 end
 
-"""Trigger output - logs event by default"""
-function trigger!( t,  ev::Val{X}, o::Output,  queue!, logger!) where X
-    @debug "$(t): Triggered event $(ev) on object $(s)"
-    logger!(t, X, o)
+"""Turn off the EPSP"""
+function off!(obj::Synapse, now, queue!, logger!)
+    # only update if the synapse isn't already off (shouldn't happen!)
+    if obj.state[]
+        @debug "$(now): Triggered synapse $(obj.id) and turned EPSP off!"
+        # inform the target, that the EPSP is over
+        obj.target.state_syn[] -= obj.magnitude[]
+        # reset the synapse's state
+        obj.magnitude[] = zero(obj.magnitude[])
+        obj.state[] = false
+        logger!(now, :epsp_ends, obj.id, obj.state[])
+    else
+        @debug "$(now): Triggered synapse $(obj.id), but didn't turn EPSP off!"
+    end
+    return nothing
+end
+
+"""Trigger output"""
+function maybe_on!(obj::Output, now, queue!, logger!)
+    @debug "$(now): Triggered output $(obj.id)!"
+    logger!(now, :spikes, obj.id, true)
     return nothing
 end
 
@@ -309,16 +363,19 @@ end
 
 struct Logger
     data::DataFrame
+    filter::Function
 
-    function Logger(net::Network{ID,T,WT,IT}) where {ID,T,WT,IT}
-        data = DataFrame(:t=>T[], :output=>ID[], :event=>Symbol[], :state=>IT[])
-        new(data)
+    function Logger(net::Network{ID,T,WT,IT}; filter=(t,tp,id,x)->true, DT=Union{Bool,IT}) where {ID,T,WT,IT}
+        data = DataFrame(:t=>T[], :event=>Symbol[], :object=>ID[], :state=>DT[])
+        new(data, filter)
     end
 end
 
 """Log state of 'Output' object at each event"""
-function (l::Logger)(t, ev, obj::Output)
-    push!(getfield(l,:data), (t=t, output=obj.id, event=ev, state=obj.state_syn[]))
+function (l::Logger)(args...)
+    if getfield(l, :filter)(args...)
+        push!(getfield(l,:data), args)
+    end
 end
 
 Base.getproperty(l::Logger, sym::Symbol) = getproperty(getfield(l,:data),sym)
@@ -328,6 +385,7 @@ Base.propertynames(l::Logger) = propertynames(getfield(l,:data))
 ## pretty printing                                                            ##
 ################################################################################
 
+Base.show(io::IO, x::Logger)   = Base.show(io, getfield(x,:data))
 Base.show(io::IO, x::Network)  = print(io, "Network with $(length(x.inputs)) inputs and $(length(x.neurons)) neurons")
 Base.show(io::IO, x::Neuron)   = print(io, "Neuron '$(x.id)' with $(length(x.next_upstream)) child-segments and $(length(x.synapses)) outgoing synapses")
 Base.show(io::IO, x::Input)    = print(io, "Input '$(x.id)' with $(length(x.synapses)) outgoing synapses")

@@ -3,26 +3,14 @@ import ProgressMeter
 export simulate!, Event, is_superthreshold
 
 
-struct Event{T, ID, V}
-    t::T
-    id::ID
-    value::V
-end
-Base.isless(ev1::Event, ev2::Event) = isless(ev1.t, ev2.t)
-
 ##############################
-trigger!(t,T,obj::O,x,y) where {O} = @warn "No handler implemented for event-type $(T) on object-type $(O)!"
-function Logger(::T) where T
-    @warn "No output_logger defined for type $(T)!"
-    function output_logger(args...)
-    end
-end
 
-function simulate!(net, inputs::Vector{Event{T,Symbol,<:Any}}, tstop=Inf; logger! = Logger(net), show_progress=true, reset=true) where T
+function simulate!(net, inputs::Vector{<:Event{T}}, tstop=Inf; logger! = Logger(net), show_progress=true, reset=true, handle! = handle!) where {T}
+    inputs = convert(Vector{Event{T}}, inputs)
     event_queue = BinaryMinHeap(inputs)
     sim_clock = Ref(zero(T))
 
-    queue!(Δt, id, obj) = push!(event_queue, Event(sim_clock[] + Δt, id, obj))
+    queue!(ev) = push!(event_queue, ev)
 
     if reset
         reset!(net)
@@ -44,8 +32,8 @@ function simulate!(net, inputs::Vector{Event{T,Symbol,<:Any}}, tstop=Inf; logger
         if sim_clock[] > tstop
             break
         end
-
-        trigger!(sim_clock[], Val(next_event.id), next_event.value, queue!, logger!)
+        
+        handle!(next_event, queue!, logger!)
     end
 
     return logger!
