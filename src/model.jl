@@ -256,8 +256,8 @@ end
 
 """Check if this segment should switch off, since its plateau has timed out"""
 function maybe_off!(obj::Segment, now, queue!, logger!)
-    # if the segment is currently on, turn off
-    if obj.state[]
+    # if the segment is currently on and has no reason to stay on, turn off
+    if obj.state[] && ~(obj.state_syn[] >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state_seg[] >= obj.θ_seg))
         @debug "$(now): Triggered segment $(obj.id) and it turned off!"
         # propagate this info upwards
         backprop_off!(obj, now, logger!)
@@ -265,6 +265,10 @@ function maybe_off!(obj::Segment, now, queue!, logger!)
 
         # update next_downstream segment
         obj.next_downstream.state_seg[] -= 1
+        # turning off might have withdrawn support for the downstream segment (e.g. if this segment was inhibited via a synapse)
+        if isa(obj.next_downstream, Segment)
+            maybe_off!(obj.next_downstream, now, queue!, logger!)
+        end
     else
         @debug "$(now): Triggered segment $(obj.id), but it didn't turn off!"
     end
@@ -327,13 +331,11 @@ function on!(obj::Synapse, now, queue!, logger!)
         # don't forget to turn off EPSP
         queue!(Event(:epsp_ends, now, now+obj.spike_duration, obj))
 
-        # if the spike was excitatory ...
+        # if the spike was excitatory this EPSP might have triggered a plateau in the target
+        # else if it was inhibitory this EPSP may have destroyed any ongoing plateau
         if obj.magnitude[] > zero(obj.magnitude[])
-            # ... this EPSP might have triggered a plateau in the target
             maybe_on!(obj.target, now,  queue!, logger!)
-        # else if it was inhibitory ...
         elseif obj.magnitude[] < zero(obj.magnitude[])
-            # this EPSP may have destroyed any ongoing plateau
             maybe_off!(obj.target, now,  queue!, logger!)
         end
     else
@@ -350,9 +352,8 @@ function off!(obj::Synapse, now, queue!, logger!)
         # inform the target, that the EPSP is over
         obj.target.state_syn[] -= obj.magnitude[]
 
-        # if the spike was inhibitory ...
+        # if the spike was inhibitory, this EPSP's end may trigger a rebound spike
         if obj.magnitude[] < zero(obj.magnitude[])
-            # this EPSP's end may trigger a rebound spike
             maybe_on!(obj.target, now,  queue!, logger!)
         end
 

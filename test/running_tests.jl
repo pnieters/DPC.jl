@@ -224,3 +224,206 @@ end
         @test length(logger.t) == length(trial.output) && logger.t ≈ Vector{Float64}(trial.output)
     end
 end
+
+
+@testset "Test inhibition at soma" begin
+    config = """
+    spike_duration: 4.99
+    inputs:
+    - id: i1
+    - id: i2
+    - id: i3
+    outputs:
+    - id: o1
+    neurons:
+    - id: n1
+      refractory_duration: 5.0 # <-----------------
+    synapses:
+    - {id: syn1, source: i1, target: n1}
+    - {id: syn2, source: i2, target: n1, weight: -1}
+    - {id: syn3, source: i3, target: n1, weight: -1, spike_duration: 10}
+    - {id: syn4, source: n1, target: o1, spike_duration: 0}
+    """
+    
+    (net,objects) = load_network(YAML_source=config)
+    
+    trials=[
+      (
+        summary="Inhibit after spike",
+        input=[
+          Event(:input_spikes, 0.0, 1.0, objects[:i1]),
+          Event(:input_spikes, 0.0, 1.5, objects[:i2])
+        ],
+        output=[3.0]
+      ),
+      (
+        summary="Inhibit before spike",
+        input=[
+          Event(:input_spikes, 0.0, 1.0, objects[:i2]),
+          Event(:input_spikes, 0.0, 1.5, objects[:i1])
+        ],
+        output=[7.99]
+      ),
+      (
+        summary="Inhibit with long EPSP",
+        input=[
+          Event(:input_spikes, 0.0, 1.0, objects[:i3]),
+          Event(:input_spikes, 0.0, 1.5, objects[:i1])
+        ],
+        output=[]
+      ),
+      (
+        summary="Inhibition can prevent rebound spike",
+        input=[
+          Event(:input_spikes, 0.0, 1.0, objects[:i3]),
+          Event(:input_spikes, 0.0, 1.0, objects[:i2]),
+          Event(:input_spikes, 0.0, 1.5, objects[:i1])
+        ],
+        output=[]
+      ),
+    ]
+    @testset "$(trial.summary)" for trial in trials
+      logger=simulate!(net, trial.input; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
+      @test length(logger.t) == length(trial.output) && logger.t ≈ Vector{Float64}(trial.output)
+    end
+end
+
+#####
+
+@testset "Test inhibition on multiple branches" begin
+    config = """
+    refractory_duration: 10
+    inputs:
+    - id: i1
+    - id: i2
+    - id: i3
+    - id: i4
+    - id: i5
+    - id: i6
+    - id: i7
+    - id: i8
+    outputs:
+    - id: o1
+    neurons:
+    - id: n1
+      branches:
+        - id: s0
+          branches:
+            - id: s1 
+            - id: s2
+    synapses:
+    - {id: syn1, source: i1, target: n1}
+    - {id: syn2, source: i2, target: n1, weight: -1, spike_duration: 10}
+    - {id: syn3, source: i3, target: s1}
+    - {id: syn4, source: i4, target: s1, weight: -1}
+    - {id: syn5, source: i5, target: s2}
+    - {id: syn6, source: i6, target: s2, weight: -1}
+    - {id: syn7, source: i7, target: s0}
+    - {id: syn8, source: i8, target: s0, weight: -1}
+    - {id: syn9, source: n1, target: o1, spike_duration: 0}
+    """
+
+    
+    (net,objects) = load_network(YAML_source=config)
+
+    trials=[
+      (
+        summary="Cascade",
+        input=[
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau
+          Event(:input_spikes, 0.0, 7.5, objects[:i7]), # trigger plateau
+          Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should trigger a spike!
+        ],
+        output=[12.0]
+      ),
+      (
+        summary="Cascade interrupted 1",
+        input=[
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau
+          Event(:input_spikes, 0.0, 5.0, objects[:i4]), # end plateau
+          Event(:input_spikes, 0.0, 7.5, objects[:i7]), # fails to trigger plateau
+          Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should not trigger a spike!
+        ],
+        output=[]
+      ),
+      (
+        summary="Cascade not interrupted 1",
+        input=[
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau
+          Event(:input_spikes, 0.0, 5.0, objects[:i7]), # trigger plateau
+          Event(:input_spikes, 0.0, 7.5, objects[:i4]), # end plateau in top segment --> irrelevant!
+          Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should not trigger a spike!
+        ],
+        output=[12.0]
+      ),
+      (
+        summary="Cascade interrupted 2",
+        input=[
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau
+          Event(:input_spikes, 0.0, 5.0, objects[:i7]), # trigger plateau
+          Event(:input_spikes, 0.0, 7.5, objects[:i8]), # end plateau in lower segment
+          Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should not trigger a spike!
+        ],
+        output=[]
+      ),
+      (
+        summary="Cascade interrupted 3",
+        input=[
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau
+          Event(:input_spikes, 0.0, 5.0, objects[:i7]), # trigger plateau
+          Event(:input_spikes, 0.0, 7.5, objects[:i2]), # inhibit soma
+          Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should not trigger a spike!
+        ],
+        output=[]
+      ),
+      (
+        summary="Cross-branch uninterrupted",
+        input=[
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau on s1
+          Event(:input_spikes, 0.0, 1.0, objects[:i5]), # trigger plateau on s2
+          Event(:input_spikes, 0.0, 2.0, objects[:i7]), # trigger plateau on s0
+          Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should trigger a spike!
+        ],
+        output=[12.0]
+      ),
+      (
+        summary="Cross-branch interrupted",
+        input=[
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau on s1
+          Event(:input_spikes, 0.0, 1.0, objects[:i5]), # trigger plateau on s2
+          Event(:input_spikes, 0.0, 2.0, objects[:i7]), # trigger plateau on s0
+          Event(:input_spikes, 0.0, 3.0, objects[:i8]), # end plateau on s0
+          Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should not trigger a spike!
+        ],
+        output=[]
+      ),
+      (
+        summary="Cross-branch not interrupted",
+        input=[
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau on s1
+          Event(:input_spikes, 0.0, 1.0, objects[:i5]), # trigger plateau on s2
+          Event(:input_spikes, 0.0, 2.0, objects[:i7]), # trigger plateau on s0
+          Event(:input_spikes, 0.0, 3.0, objects[:i4]), # end plateau on s1
+          Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should still trigger a spike!
+        ],
+        output=[12.0]
+      ),
+      (
+        summary="Cross-branch interrupted again",
+        input=[
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau on s1
+          Event(:input_spikes, 0.0, 1.0, objects[:i5]), # trigger plateau on s2
+          Event(:input_spikes, 0.0, 2.0, objects[:i7]), # trigger plateau on s0
+          Event(:input_spikes, 0.0, 3.0, objects[:i4]), # end plateau on s1
+          Event(:input_spikes, 0.0, 5.0, objects[:i6]), # end plateau on s2 -> should also end plateau on s0
+          Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should not trigger a spike!
+        ],
+        output=[]
+      )
+    ]
+
+    @testset "Test cascade: $(trial.summary)" for trial in trials
+        logger=simulate!(net, trial.input; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
+        @test length(logger.t) == length(trial.output) && logger.t ≈ Vector{Float64}(trial.output)
+    end
+end
