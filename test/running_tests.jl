@@ -1,5 +1,5 @@
-using ADSP, Test
 #ENV["JULIA_DEBUG"] = ADSP
+using ADSP, Test
 
 @testset "Test delay & refractoriness" begin
     config = """
@@ -22,7 +22,7 @@ using ADSP, Test
     logger=simulate!(net, inp, 10.0; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
     # should spike once every 1ms for the whole spike duration of 5ms with 2ms delay 
     # (due to the 2 synapses) after the input spike at 1ms, i.e. after 3ms
-    @test length(logger.t)==5 && logger.t ≈ [3.0,4.0,5.0,6.0,7.0]
+    @test length(logger.data.t)==5 && logger.data.t ≈ [3.0,4.0,5.0,6.0,7.0]
 
     # if the refractoriness = 5.0ms > the duration of a spike, the neuron should only spike once 
     config = """
@@ -42,7 +42,7 @@ using ADSP, Test
     (net,objects) = load_network(YAML_source=config)
     inp=[Event(:input_spikes, 0.0, 1.0, objects[:i1])]
     logger=simulate!(net, inp, 10.0; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
-    @test length(logger.t)==1 && logger.t ≈ [3.0]
+    @test length(logger.data.t)==1 && logger.data.t ≈ [3.0]
 end
 
 @testset "Reset test" begin
@@ -73,12 +73,13 @@ end
     (net,objects) = load_network(YAML_source=config)
     inp=[Event(:input_spikes, 0.0, 1.0, objects[:i1])]
     logger=simulate!(net, inp, 10.0; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
-    @test length(logger.t)==1 && logger.t ≈ [3.0]
+    @test length(logger.data.t)==1 && logger.data.t ≈ [3.0]
     logger=simulate!(net, inp, 10.0; show_progress=false, reset=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
-    @test isempty(logger.t)
+    @test isempty(logger.data.t)
     logger=simulate!(net, inp, 10.0; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
-    @test length(logger.t)==1 && logger.t ≈ [3.0]
+    @test length(logger.data.t)==1 && logger.data.t ≈ [3.0]
 end
+
 
 @testset "Test cascades" begin
   config = """
@@ -163,7 +164,7 @@ end
 
   @testset "Test cascade: $(trial.summary)" for trial in cascade_trials
     logger=simulate!(net, trial.input; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
-    @test length(logger.t) == length(trial.output) && logger.t ≈ Vector{Float64}(trial.output)
+    @test length(logger.data.t) == length(trial.output) && logger.data.t ≈ Vector{Float64}(trial.output)
   end
 end
 
@@ -221,7 +222,7 @@ end
     
     @testset "Test cascade: $(trial.summary)" for trial in trials
         logger=simulate!(net, trial.input; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
-        @test length(logger.t) == length(trial.output) && logger.t ≈ Vector{Float64}(trial.output)
+        @test length(logger.data.t) == length(trial.output) && logger.data.t ≈ Vector{Float64}(trial.output)
     end
 end
 
@@ -284,7 +285,7 @@ end
     ]
     @testset "$(trial.summary)" for trial in trials
       logger=simulate!(net, trial.input; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
-      @test length(logger.t) == length(trial.output) && logger.t ≈ Vector{Float64}(trial.output)
+      @test length(logger.data.t) == length(trial.output) && logger.data.t ≈ Vector{Float64}(trial.output)
     end
 end
 
@@ -424,6 +425,42 @@ end
 
     @testset "Test cascade: $(trial.summary)" for trial in trials
         logger=simulate!(net, trial.input; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:o1))
-        @test length(logger.t) == length(trial.output) && logger.t ≈ Vector{Float64}(trial.output)
+        @test length(logger.data.t) == length(trial.output) && logger.data.t ≈ Vector{Float64}(trial.output)
     end
+end
+
+
+@testset "Prevent multiple triggers" begin
+    config = """
+    refractory_duration: 100.01
+    inputs:
+    - id: i1
+    - id: i2
+    outputs:
+    - id: o
+    neurons:
+    - id: n
+      θ_syn: 1
+      θ_seg: 2
+      branches: 
+        - id: seg1
+        - id: seg2
+    synapses:
+    - {id: syn1, source: i1, target: seg1}
+    - {id: syn2, source: i2, target: seg2}
+    - {id: syn3, source: i1, target: n}
+    - {id: syn4, source: i2, target: n}
+    - {id: syn_out, source: n, target: o, spike_duration: 0, delay: 0}
+    """
+
+    (net,objects) = load_network(YAML_source=config)
+
+    input=[
+        Event(:input_spikes, 0.0,  0.0, objects[:i1]),
+        Event(:input_spikes, 0.0,  2.0, objects[:i2]),
+    ]
+
+    logger=simulate!(net, input, 10.0; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->id==:n))
+    n = filter(x->(x.object==:n && x.event==:spikes), logger.data)[!, :t]
+    @test length(logger.data.t)==1 && n ≈ [3.0]
 end

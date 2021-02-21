@@ -289,7 +289,7 @@ end
 function maybe_on!(obj::Neuron, now, queue!, logger!)
     if ~obj.state[]  && obj.state_syn[] >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state_seg[] >= obj.θ_seg)
         @debug "$(now): Triggered neuron $(obj.id) and it fired a spike!"
-        obj.state[] == true
+        obj.state[] = true
         logger!(now, :spikes, obj.id, obj.state[])
 
         # trigger all synapses
@@ -397,14 +397,14 @@ function (l::Logger)(args...)
     end
 end
 
-Base.getproperty(l::Logger, sym::Symbol) = getproperty(getfield(l,:data),sym)
-Base.propertynames(l::Logger) = propertynames(getfield(l,:data))
+# Base.getproperty(l::Logger, sym::Symbol) = getproperty(getfield(l,:data),sym)
+# Base.propertynames(l::Logger) = propertynames(getfield(l,:data))
 
 ################################################################################
 ## pretty printing                                                            ##
 ################################################################################
 
-Base.show(io::IO, x::Logger)   = Base.show(io, getfield(x,:data))
+Base.show(io::IO, x::Logger)   = show(io, getfield(x,:data))
 Base.show(io::IO, x::Network)  = print(io, "Network with $(length(x.inputs)) inputs and $(length(x.neurons)) neurons")
 Base.show(io::IO, x::Neuron)   = print(io, "Neuron '$(x.id)' with $(length(x.next_upstream)) child-segments and $(length(x.synapses)) outgoing synapses")
 Base.show(io::IO, x::Input)    = print(io, "Input '$(x.id)' with $(length(x.synapses)) outgoing synapses")
