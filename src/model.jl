@@ -13,7 +13,7 @@ abstract type NeuronOrSegment{ID,T,WT,IT} <: NeuronOrSegmentOrOutput{ID,T,WT,IT}
 abstract type AbstractNetwork{ID,T,WT,IT} <:AbstractComponent{ID,T,WT,IT} end
 abstract type AbstractSynapse{ID,T,WT,IT} <:AbstractComponent{ID,T,WT,IT} end
 
-struct Segment{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
+mutable struct Segment{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
     id::ID
     θ_syn::IT
     θ_seg::Int
@@ -35,7 +35,7 @@ struct Segment{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
     end
 end
 
-struct Synapse{ID,T,WT,IT} <: AbstractSynapse{ID,T,WT,IT}
+mutable struct Synapse{ID,T,WT,IT} <: AbstractSynapse{ID,T,WT,IT}
     id::ID
     target::NeuronOrSegmentOrOutput{ID,T,WT,IT}
     delay::T
@@ -57,7 +57,7 @@ struct Synapse{ID,T,WT,IT} <: AbstractSynapse{ID,T,WT,IT}
 end
 sample_spike_magnitude(weight)=weight
 
-struct Neuron{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
+mutable struct Neuron{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
     id::ID
     θ_syn::IT
     θ_seg::Int
@@ -78,7 +78,7 @@ struct Neuron{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
     end
 end
 
-struct Input{ID,T,WT,IT} <: AbstractComponent{ID,T,WT,IT}
+mutable struct Input{ID,T,WT,IT} <: AbstractComponent{ID,T,WT,IT}
     id::ID
     synapses::Vector{Synapse{ID,T,WT,IT}}
     net::AbstractNetwork{ID,T,WT,IT}
@@ -90,7 +90,7 @@ struct Input{ID,T,WT,IT} <: AbstractComponent{ID,T,WT,IT}
     end
 end
 
-struct Output{ID,T,WT,IT} <: NeuronOrSegmentOrOutput{ID,T,WT,IT}
+mutable struct Output{ID,T,WT,IT} <: NeuronOrSegmentOrOutput{ID,T,WT,IT}
     id::ID
     net::AbstractNetwork{ID,T,WT,IT}
     state_syn::IT
@@ -102,7 +102,7 @@ struct Output{ID,T,WT,IT} <: NeuronOrSegmentOrOutput{ID,T,WT,IT}
     end
 end
 
-struct Network{ID,T,WT,IT} <: AbstractNetwork{ID,T,WT,IT}
+mutable struct Network{ID,T,WT,IT} <: AbstractNetwork{ID,T,WT,IT}
     inputs::Vector{Input{ID,T,WT,IT}}
     outputs::Vector{Output{ID,T,WT,IT}}
     neurons::Vector{Neuron{ID,T,WT,IT}}
