@@ -1,4 +1,4 @@
-ENV["JULIA_DEBUG"] = "ADSP"
+#ENV["JULIA_DEBUG"] = "ADSP"
 using ADSP, Test
 
 @testset "Test delay & refractoriness" begin
