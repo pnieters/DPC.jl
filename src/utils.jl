@@ -198,6 +198,19 @@ function load_network(YAML_file=nothing; YAML_source=nothing, id_type=Symbol, ti
     neurons = pop!(obj, "neurons", [])
     synapses = pop!(obj, "synapses", [])
 
+    if inputs === nothing
+        inputs = []
+    end
+    if outputs === nothing
+        outputs = []
+    end
+    if neurons === nothing
+        neuron = []
+    end
+    if synapses === nothing
+        synapses = []
+    end
+
     # get default parameters
     kwargs = Dict{id_type,Any}()
     parse_kwarg!(kwargs, obj, :default_refractory_duration, time_type, "refractory_duration")

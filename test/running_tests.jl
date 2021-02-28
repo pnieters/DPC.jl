@@ -348,17 +348,17 @@ end
         output=[]
       ),
       (
-        summary="Cascade not interrupted 1",
+        summary="Cascade not interrupted 2",
         input=[
-          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau
-          Event(:input_spikes, 0.0, 5.0, objects[:i7]), # trigger plateau
-          Event(:input_spikes, 0.0, 7.5, objects[:i4]), # end plateau in top segment --> irrelevant!
-          Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should not trigger a spike!
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau in s1 
+          Event(:input_spikes, 0.0, 5.0, objects[:i7]), # trigger plateau in s0 --> also triggers plateau in s2
+          Event(:input_spikes, 0.0, 7.5, objects[:i4]), # end plateau in top s1 --> doesn't turn off s0
+          Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should trigger a spike!
         ],
         output=[12.0]
       ),
       (
-        summary="Cascade interrupted 2",
+        summary="Cascade interrupted 3",
         input=[
           Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau
           Event(:input_spikes, 0.0, 5.0, objects[:i7]), # trigger plateau
@@ -368,7 +368,7 @@ end
         output=[]
       ),
       (
-        summary="Cascade interrupted 3",
+        summary="Cascade interrupted 4",
         input=[
           Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau
           Event(:input_spikes, 0.0, 5.0, objects[:i7]), # trigger plateau
@@ -429,6 +429,34 @@ end
     end
 end
 
+@testset "Don't forget reset" begin
+    #This test for a bug, where a plateau-reset would not happen if plateau conditions are still met at the time where 
+    #the plateau should end. No new end would be scheduled, therefore the segment would stay on indefinitely.
+
+    config = """
+    plateau_duration: 100
+    refractory_duration: 5.01
+    inputs: 
+    - id: i1
+    - id: i2
+    neurons:
+    - id: n
+      branches:
+        - id: seg
+    synapses:
+    - {id: syn1, source: i1, target: seg}
+    - {id: syn2, source: i2, target: n}
+    """
+
+    (net,objects) = load_network(YAML_source=config)
+    input=[
+      Event(:input_spikes, 0.0, 0.0, objects[:i1]), # trigger plateau on seg
+      Event(:input_spikes, 0.0, 99.0, objects[:i1]), # satisfy plateau conditions at time of plateau-end
+      Event(:input_spikes, 0.0, 1000.0, objects[:i2]), # this would trigger a spike much later
+    ]
+    logger=simulate!(net, input; show_progress=false, logger! = Logger(net; filter=(t,tp,id,x)->tp==:spikes))
+    @test isempty(logger.data)
+end
 
 @testset "Prevent multiple triggers" begin
     config = """

@@ -257,7 +257,8 @@ end
 """Check if this segment should switch off, since its plateau has timed out"""
 function maybe_off!(obj::Segment, now, queue!, logger!)
     # if the segment is currently on and has no reason to stay on, turn off
-    if obj.state && ~(obj.state_syn >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state_seg >= obj.θ_seg))
+
+    if obj.state
         @debug "$(now): Triggered segment $(obj.id) and it turned off!"
         # propagate this info upwards
         backprop_off!(obj, now, logger!)
@@ -266,7 +267,7 @@ function maybe_off!(obj::Segment, now, queue!, logger!)
         # update next_downstream segment
         obj.next_downstream.state_seg -= 1
         # turning off might have withdrawn support for the downstream segment (e.g. if this segment was inhibited via a synapse)
-        if isa(obj.next_downstream, Segment)
+        if isa(obj.next_downstream, Segment) && obj.next_downstream.state_seg[] < obj.next_downstream.θ_seg
             maybe_off!(obj.next_downstream, now, queue!, logger!)
         end
     else
