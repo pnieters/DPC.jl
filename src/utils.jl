@@ -1,6 +1,8 @@
-using Distributions, Plots, YAML, DifferentialEquations
+import YAML
+using DataStructures: OrderedDict
+#, DifferentialEquations
 
-export generateRFSpikes, generateSpikeVolleys, plot_spike_raster, sample_inhomogeneous_poisson, generateEventsFromSpikes, load_yaml, save_yaml
+export generateRFSpikes, generateSpikeVolleys, plot_spike_raster, sample_inhomogeneous_poisson, generateEventsFromSpikes, load_network, save_network
 
 """
     generateRFSpikes(trange, input, rfs, λ; group_size=ones(Int,length(rfs)), dt=1e-3, background_rate=0.0)
@@ -37,7 +39,7 @@ function generateRFSpikes(trange, input, rfs, λ; group_size=ones(Int,length(rfs
     return spikes
 end
 
-
+"""
 function sample_inhomogeneous_poisson(rate, trange; kwargs...)
     spiketimes = Float64[]
     rate_wrapped(u,p,t) = rate(t)
@@ -50,6 +52,7 @@ function sample_inhomogeneous_poisson(rate, trange; kwargs...)
 
     return spiketimes
 end
+"""
 
 function generateSpikeVolleys(trange, population_sizes, λs, volley_sizes, background_rate=0; dt_spike=0.0, dt_volley=0, kwargs...)
     T = trange[2]-trange[1]
@@ -173,157 +176,215 @@ function generateEventsFromSpikes(s, population_names; spike_duration=0.001)
     return events
 end
 
-
-function _recursive_parse_branches!(ancestor_id, branch_id, branch_obj)
-    sub_branches = haskey(branch_obj, "branches") && ~isa(branch_obj["branches"],Nothing) && ~isempty(branch_obj["branches"]) ?
-        (_recursive_parse_branches!(branch_id, Symbol(subbranch_id), subbranch_obj) for (subbranch_id, subbranch_obj) ∈ branch_obj["branches"]) : []
-
-    delete!(branch_obj, "branches")
-
-    branch_obj["ancestor"] = ancestor_id
-    branches = merge!(Dict(branch_id=>branch_obj), sub_branches...)
-    return branches
-end
-
-function _load_synapse!(syn_id, syn, synapses; default_release_probability=0.5)
-    synapse = if isa(syn, Dict)
-        transmitter = Symbol(get(syn, "transmitter", "excitatory"))#get(Dict("excitatory"=>:excitatory,"inhibitory"=>:inhibitory,"reward"=>:reward,"punish"=>:punish), lowercase(get(syn, "transmitter", "excitatory")), :excitatory)
-        release_probability = (get(syn, "release_probability", default_release_probability))
-        Synapse(syn_id, Float64(release_probability), false)
-    else
-        Synapse(syn_id, Float64(syn), false)
-    end
-    push!(synapses, synapse)
-end
-
-
 """
-    load_yaml(::Type{Network}, YAML_source)
+    load_network(YAML_source)
 
 Loads a network from a configuration file or string `YAML_source`.
 """
-function load_yaml(::Type{Network{T}}, YAML_file=nothing; YAML_source=nothing) where {T}
+function load_network(YAML_file=nothing; YAML_source=nothing, id_type=Symbol, time_type=Float64, weight_type=Int, synaptic_input_type=Int) where {T}
     @assert (YAML_file === nothing) ⊻ (YAML_source === nothing) "Must provide exactly one of `YAML_file` or `YAML_source` "
     obj = if YAML_file !== nothing
         YAML.load_file(YAML_file)
     else
         YAML.load(YAML_source)
     end
+    
+    """ Helper function to parse optional keyword arguments, should they be specified"""
+    parse_kwarg!(kwargs, obj, key, parser, key_str=String(key)) = if key_str in keys(obj) kwargs[key]=parser(pop!(obj,key_str)) end
+    
+    # get basic blocks
+    inputs = pop!(obj, "inputs", [])
+    outputs = pop!(obj, "outputs", [])
+    neurons = pop!(obj, "neurons", [])
+    synapses = pop!(obj, "synapses", [])
 
-    default_spike_duration = (get(obj,"spike_duration",1.0))
-    default_plateau_duration = (get(obj,"plateau_duration",100.0))
-    default_release_probability = (get(obj, "release_probability", 0.5))
-
-    # collect all neurons belonging to the network
-    neurons = Dict{Symbol,Neuron{T}}()
-    for (nid,neuron) ∈ obj["neurons"]
-        neuron_id = NeuronID(Symbol(nid))
-        spike_duration = (get(neuron, "spike_duration", default_spike_duration))
-        release_probability = (get(neuron, "release_probability", default_release_probability))
-
-        branches = _recursive_parse_branches!(nothing, :soma, neuron["soma"])
-        descendents = Dict{Symbol,Vector{Symbol}}(bid=>Symbol[] for bid ∈ keys(branches))
-
-        # determine each branches' descendents
-        for (bid,branch) ∈ branches
-            if ~isa(branch["ancestor"], Nothing)
-                # "I'm a direct descendent of my closest ancestor"
-                push!(descendents[branch["ancestor"]], bid)
-            end
-        end
-
-        # collect all segments belonging to the neuron
-        segments = Dict{Symbol, Segment}()
-        for (bid,branch) ∈ branches
-            seg_id = SegmentID(neuron_id, Symbol(bid))
-            min_synapses = branch["min_synapses"]
-            min_segments = branch["min_segments"]
-            plateau_duration = (get(branch, "plateau_duration", default_plateau_duration))
-
-            next_upstream = descendents[bid]
-            next_downstream = branch["ancestor"]
-
-            synapses = Dict{Symbol,Vector{Synapse}}()
-            if isa(branch["synapses"], Vector)
-                for syn_id ∈ branch["synapses"]
-                    synapse_id = SynapseID(seg_id, Symbol(syn_id), 1)
-                    synapses[Symbol(syn_id)] = [Synapse(synapse_id, release_probability, false)]
-                end
-            else
-                for (syn_id, syns) ∈ branch["synapses"]
-                    synapses[Symbol(syn_id)] = Synapse[]
-
-                    if isa(syns, Vector)
-                        for (i,syn) ∈ enumerate(syns)
-                            synapse_id = SynapseID(seg_id, Symbol(syn_id), i)
-                            _load_synapse!(synapse_id, syn, synapses[Symbol(syn_id)]; default_release_probability=release_probability)
-                        end
-                    else
-                        synapse_id = SynapseID(seg_id, Symbol(syn_id), 1)
-                        _load_synapse!(synapse_id, syns, synapses[Symbol(syn_id)]; default_release_probability=release_probability)
-                    end
-                end
-            end
-
-            segments[bid] = Segment(seg_id, min_synapses, min_segments, false, plateau_duration, synapses, next_downstream, next_upstream)
-        end
-
-        neurons[Symbol(nid)] = Neuron(neuron_id, Float64(spike_duration), segments)
+    if inputs === nothing
+        inputs = []
+    end
+    if outputs === nothing
+        outputs = []
+    end
+    if neurons === nothing
+        neuron = []
+    end
+    if synapses === nothing
+        synapses = []
     end
 
-    delete!(obj, "neurons")
+    # get default parameters
+    kwargs = Dict{id_type,Any}()
+    parse_kwarg!(kwargs, obj, :default_refractory_duration, time_type, "refractory_duration")
+    parse_kwarg!(kwargs, obj, :default_delay, time_type, "delay")
+    parse_kwarg!(kwargs, obj, :default_spike_duration, time_type, "spike_duration")
+    parse_kwarg!(kwargs, obj, :default_plateau_duration, time_type, "plateau_duration")
+    
+    if ~isempty(obj)
+        @warn "The following network parameters could not be parsed: $(join(keys(obj), ", "))"
+    end
 
-    return (network=Network(neurons), metainfo=Dict(Symbol(key)=>value for (key,value) ∈ pairs(obj)))
+    net = Network(;
+        id_type=id_type, time_type=time_type, weight_type=weight_type, synaptic_input_type=synaptic_input_type, 
+        kwargs...
+    )
+    
+    
+    # internal flat store for all onject (needed for snypases)
+    all_segments = Dict{id_type,Any}()
+
+    function recurse_branches(parent, branch)
+        id = id_type(pop!(branch, "id"))
+        
+        kwargs = Dict{Symbol,Any}()
+        parse_kwarg!(kwargs, branch, :plateau_duration, time_type)
+        parse_kwarg!(kwargs, branch, :θ_syn, synaptic_input_type)
+        parse_kwarg!(kwargs, branch, :θ_seg, Int)
+
+        seg = Segment(id, parent; kwargs...)
+        all_segments[id] = seg
+
+        for subbranch in pop!(branch, "branches", [])
+            recurse_branches(seg, subbranch)
+        end
+
+        if ~isempty(branch)
+            @warn "The following segment parameters could not be parsed: $(join(keys(branch), ", "))"
+        end
+    end
+
+    for neuron in neurons
+        id = id_type(pop!(neuron, "id"))
+        
+        kwargs = Dict{Symbol,Any}()
+        parse_kwarg!(kwargs, neuron, :refractory_duration, time_type)
+        parse_kwarg!(kwargs, neuron, :θ_syn, synaptic_input_type)
+        parse_kwarg!(kwargs, neuron, :θ_seg, Int)
+
+        n = Neuron(id, net; kwargs...)
+        all_segments[id] = n
+
+
+        for branch in pop!(neuron, "branches", [])
+            recurse_branches(n, branch)
+        end
+
+        if ~isempty(neuron)
+            @warn "The following neuron parameters could not be parsed: $(join(keys(neuron), ", "))"
+        end
+    end
+
+    for input in inputs
+        id = id_type(input["id"])
+        inp = Input(id, net)
+        all_segments[id] = inp
+    end
+
+    for output in outputs
+        id = id_type(output["id"])
+        out = Output(id, net)
+        all_segments[id] = out
+    end
+
+    for synapse in synapses
+        id = id_type(pop!(synapse, "id"))
+        source = all_segments[id_type(pop!(synapse, "source"))]
+        target = all_segments[id_type(pop!(synapse, "target"))]
+
+        kwargs = Dict{Symbol,Any}()
+        parse_kwarg!(kwargs, synapse, :delay, time_type)
+        parse_kwarg!(kwargs, synapse, :weight, weight_type)
+        parse_kwarg!(kwargs, synapse, :spike_duration, time_type)
+
+        syn = Synapse(id, source, target; kwargs...)
+
+        if ~isempty(synapse)
+            @warn "The following synapse parameters could not be parsed: $(join(keys(synapse), ", "))"
+        end
+        all_segments[id] = syn
+    end
+
+    return (network=net, objects=all_segments)
 end
 
 """
-    save_yaml(::Type{Network}, filename=nothing)
+    save_network!(net, filename=nothing)
 
-Saves a network to a configuration file or string, if no filename is given.
+Saves a network to a YAML string that is returned and saved to file if `filename` is not `nothing`
 """
-function save_yaml(net::Network, filename=nothing, metainfo=Dict{Symbol,Any}())
+function save_network(net::Network{id_type, time_type, weight_type, synaptic_input_type}, filename=nothing) where {id_type, time_type, weight_type, synaptic_input_type}
+    data = OrderedDict{String,Any}()
 
-    neurons = Dict{Symbol,Dict}()
-    for (nid,neuron) ∈ net.neurons
-        
-        # parse all segments
-        segments = Dict{Symbol,Dict}()
-        for (segid,segment) ∈ neuron.segments
-
-            synapse_groups = Dict{Symbol,Vector}()
-            for (synid,synapse_group) ∈ segment.synapses
-                synapses = Vector{Dict}()
-                for synapse ∈ synapse_group
-                    push!(synapses, Dict(
-                        :release_probability => synapse.p
-                    ))
-                end
-                synapse_groups[synid] = synapses
-            end
-
-            segments[segid] = Dict(
-                :min_synapses => segment.θ_syn,
-                :min_segments => segment.θ_seg,
-                :plateau_duration => segment.plateau_duration,
-                :synapses => synapse_groups,
-                :branches => Dict{Symbol,Dict}()
-            )
-        end
-
-        function _nest_recursive(segid, segments)
-            seg = segments[segid]
-            seg[:branches] = Dict(bid => _nest_recursive(bid, segments) for bid ∈ neuron.segments[segid].next_upstream)
-            return seg
-        end
-
-        neurons[nid] = Dict(
-            :spike_duration => neuron.spike_duration, 
-            :soma => _nest_recursive(:soma, segments)
-        )
+    parse_kwarg!(kwargs, obj, key, parser, key_str=String(key)) = if key_str in keys(obj) kwargs[key]=parser(pop!(obj,key_str)) end
+    
+    # create basic blocks
+    data["inputs"] = []
+    data["outputs"] = []
+    data["neurons"] = []
+    data["synapses"] = []
+    
+    function parse_synapse(obj, synapse::Synapse)
+        syn = OrderedDict{String,Any}()
+        syn["id"] = synapse.id
+        syn["source"] = obj.id
+        syn["target"] = synapse.target.id
+        syn["delay"] = synapse.delay
+        syn["spike_duration"] = synapse.spike_duration
+        syn["weight"] = synapse.weight
+        return syn
     end
 
-    data = deepcopy(metainfo)
-    data[:neurons] = neurons
+    function recurse_branches!(obj, branch)
+        branch["id"] = obj.id
+        branch["plateau_duration"] = obj.plateau_duration
+        branch["θ_syn"] = obj.θ_syn
+        branch["θ_seg"] = obj.θ_seg
+
+        if ~isempty(obj.next_upstream)
+            branch["branches"] = []
+            for subobj in obj.next_upstream
+                tmp = OrderedDict{String,Any}()
+                recurse_branches!(subobj, tmp)
+                push!(branch["branches"], tmp)
+            end
+        end
+    end
+
+    for neuron in net.neurons
+        branch = OrderedDict{String,Any}()
+        branch["id"] = neuron.id
+        branch["refractory_duration"] = neuron.refractory_duration
+        branch["θ_syn"] = neuron.θ_syn
+        branch["θ_seg"] = neuron.θ_seg
+        
+        for synapse in neuron.synapses
+            push!(data["synapses"], parse_synapse(neuron, synapse))
+        end
+
+        if ~isempty(neuron.next_upstream)
+            branch["branches"] = []
+            for subobj in neuron.next_upstream
+                tmp = Dict{String,Any}()
+                push!(branch["branches"], tmp)
+                recurse_branches!(subobj, tmp)
+            end
+        end
+        push!(data["neurons"],branch)
+    end
+
+    for input in net.inputs
+        branch = OrderedDict{String,Any}()
+        branch["id"] = input.id
+        
+        for synapse in input.synapses
+            push!(data["synapses"], parse_synapse(input, synapse))
+        end
+        push!(data["inputs"],branch)
+    end
+
+    for output in net.outputs
+        branch = OrderedDict{String,Any}()
+        branch["id"] = output.id
+        push!(data["outputs"],branch)
+    end
 
     return if filename === nothing
         YAML.write(data)
