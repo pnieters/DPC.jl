@@ -1,4 +1,4 @@
-#ENV["JULIA_DEBUG"] = ADSP
+#ENV["JULIA_DEBUG"] = "ADSP"
 using ADSP, Test
 
 @testset "Test delay & refractoriness" begin
@@ -331,8 +331,8 @@ end
       (
         summary="Cascade",
         input=[
-          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau
-          Event(:input_spikes, 0.0, 7.5, objects[:i7]), # trigger plateau
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau on s1 
+          Event(:input_spikes, 0.0, 7.5, objects[:i7]), # trigger plateau on s0
           Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should trigger a spike!
         ],
         output=[12.0]
@@ -340,9 +340,9 @@ end
       (
         summary="Cascade interrupted 1",
         input=[
-          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau
-          Event(:input_spikes, 0.0, 5.0, objects[:i4]), # end plateau
-          Event(:input_spikes, 0.0, 7.5, objects[:i7]), # fails to trigger plateau
+          Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau on s1
+          Event(:input_spikes, 0.0, 5.0, objects[:i4]), # end plateau on s1
+          Event(:input_spikes, 0.0, 7.5, objects[:i7]), # fails to trigger plateau on s0
           Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should not trigger a spike!
         ],
         output=[]
@@ -351,8 +351,8 @@ end
         summary="Cascade not interrupted 2",
         input=[
           Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau in s1 
-          Event(:input_spikes, 0.0, 5.0, objects[:i7]), # trigger plateau in s0 --> also triggers plateau in s2
-          Event(:input_spikes, 0.0, 7.5, objects[:i4]), # end plateau in top s1 --> doesn't turn off s0
+          Event(:input_spikes, 0.0, 5.0, objects[:i7]), # trigger plateau in s0 
+          Event(:input_spikes, 0.0, 7.5, objects[:i4]), # end plateau in top s1 --> doesn't turns off s0
           Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should trigger a spike!
         ],
         output=[12.0]
@@ -399,7 +399,7 @@ end
         output=[]
       ),
       (
-        summary="Cross-branch not interrupted",
+        summary="Cross-branch not interrupted 1",
         input=[
           Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau on s1
           Event(:input_spikes, 0.0, 1.0, objects[:i5]), # trigger plateau on s2
@@ -410,16 +410,16 @@ end
         output=[12.0]
       ),
       (
-        summary="Cross-branch interrupted again",
+        summary="Cross-branch not interrupted 2",
         input=[
           Event(:input_spikes, 0.0, 0.0, objects[:i3]), # trigger plateau on s1
           Event(:input_spikes, 0.0, 1.0, objects[:i5]), # trigger plateau on s2
           Event(:input_spikes, 0.0, 2.0, objects[:i7]), # trigger plateau on s0
           Event(:input_spikes, 0.0, 3.0, objects[:i4]), # end plateau on s1
-          Event(:input_spikes, 0.0, 5.0, objects[:i6]), # end plateau on s2 -> should also end plateau on s0
+          Event(:input_spikes, 0.0, 5.0, objects[:i6]), # end plateau on s2
           Event(:input_spikes, 0.0, 10.0, objects[:i1]), # should not trigger a spike!
         ],
-        output=[]
+        output=[12.0]
       )
     ]
 
