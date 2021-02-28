@@ -12,12 +12,3 @@ This package is organized as follows:
 * *utils.jl*    defines additional utility functions for plotting, generating input etc.
 
 
-# Examples
-
-There are three scripts to be run to generate figures:
-
-* `examples/grid_cells/neuron_paths.jl`
-* `examples/grid_cells/ensemble_paths.jl` 
-* `examples/zoo/zoo.jl` 
-
-Executing `run_examples.jl` will execute all of them consecutively.
