@@ -245,7 +245,7 @@ end
 function maybe_on!(obj::Segment, now, queue!, logger!)
     update_state!(obj)
     # if the segment is currently off, but the plateau conditions are satisfied, turn on
-    return if ~obj.active && obj.state == voltage_elevated && obj.state_syn >= obj.θ_syn
+    return if ~obj.active && obj.state_syn >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state == voltage_elevated)
         @debug "$(now): Triggered segment $(obj.id) and it turned on!"
         
         # The segment is now active
@@ -257,7 +257,10 @@ function maybe_on!(obj::Segment, now, queue!, logger!)
 
         # turning on this segment might have also turned on the next_downstream segment
         obj.next_downstream.state_seg += 1
-        maybe_on!(obj.next_downstream, now, queue!, logger!)
+        updated = update_state!(obj.next_downstream)
+        if ~maybe_on!(obj.next_downstream, now, queue!, logger!) && updated
+            logger!(now, :upstate_start, obj.next_downstream.id, obj.next_downstream.state)
+        end
         
         # Each segment must turn off
         queue!(Event(:plateau_ends, now, now+obj.plateau_duration, obj))
@@ -284,7 +287,9 @@ function maybe_off!(obj::Segment, now, queue!, logger!)
 
         # update next_downstream segment
         obj.next_downstream.state_seg -= 1
-        update_state!(obj.next_downstream)
+        if update_state!(obj.next_downstream)
+            logger!(now, :upstate_ends, obj.next_downstream.id, obj.next_downstream.state)
+        end
     else
         @debug "$(now): Triggered segment $(obj.id), but it didn't turn off!"
     end
@@ -305,7 +310,7 @@ function update_state!(obj::Neuron)
     old_state = obj.state
     obj.state = if obj.active 
         voltage_high
-    elseif isempty(obj.next_upstream) || obj.state_seg >= obj.θ_seg
+    elseif obj.state_seg >= obj.θ_seg
         # elevated voltage due to enough upstream input
         voltage_elevated
     else
@@ -319,7 +324,7 @@ end
 function maybe_on!(obj::Neuron, now, queue!, logger!)
     update_state!(obj)
 
-    if ~obj.active && obj.state_syn >= obj.θ_syn && obj.state == voltage_elevated
+    if ~obj.active && obj.state_syn >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state == voltage_elevated)
         @debug "$(now): Triggered neuron $(obj.id) and it fired a spike!"
 
         obj.active = true
