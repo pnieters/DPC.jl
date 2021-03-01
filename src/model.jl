@@ -324,7 +324,7 @@ end
 function maybe_on!(obj::Neuron, now, queue!, logger!)
     update_state!(obj)
 
-    if ~obj.active && obj.state_syn >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state == voltage_elevated)
+    return if ~obj.active && obj.state_syn >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state == voltage_elevated)
         @debug "$(now): Triggered neuron $(obj.id) and it fired a spike!"
 
         obj.active = true
@@ -338,10 +338,11 @@ function maybe_on!(obj::Neuron, now, queue!, logger!)
 
         # don't forget to recover from refractory period
         queue!(Event(:refractory_period_ends, now, now+obj.refractory_duration, obj))
+        true
     else
         @debug "$(now): Triggered neuron $(obj.id), but didn't fire!"
+        false
     end
-    return false
 end
 
 """Check if this neuron was re-triggered to spike after refractoriness"""
