@@ -303,7 +303,9 @@ end
 
 function update_state!(obj::Neuron)
     old_state = obj.state
-    obj.state = if isempty(obj.next_upstream) || obj.state_seg >= obj.θ_seg
+    obj.state = if obj.active 
+        voltage_high
+    elseif isempty(obj.next_upstream) || obj.state_seg >= obj.θ_seg
         # elevated voltage due to enough upstream input
         voltage_elevated
     else
@@ -321,6 +323,7 @@ function maybe_on!(obj::Neuron, now, queue!, logger!)
         @debug "$(now): Triggered neuron $(obj.id) and it fired a spike!"
 
         obj.active = true
+        obj.state = voltage_high
         logger!(now, :spikes, obj.id, obj.state)
 
         # trigger all synapses
@@ -339,9 +342,9 @@ end
 """Check if this neuron was re-triggered to spike after refractoriness"""
 function maybe_off!(obj::Neuron, now, queue!, logger!)
     @debug "$(now): Neuron $(obj.id) came out of refractoriness!"
-    update_state!(obj)
     
     obj.active = false
+    update_state!(obj)
     logger!(now, :refractory_period_ends, obj.id, obj.state)
 
     # check if the neuron should spike again, right away

@@ -1,6 +1,6 @@
 using ADSP, Makie
 #include(joinpath(@__DIR__, "utils.jl"))
-include("examples/utils.jl")
+include("utils.jl")
 
 ################################################################################
 
