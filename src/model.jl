@@ -339,6 +339,7 @@ end
 """Check if this neuron was re-triggered to spike after refractoriness"""
 function maybe_off!(obj::Neuron, now, queue!, logger!)
     @debug "$(now): Neuron $(obj.id) came out of refractoriness!"
+    update_state!(obj)
     
     obj.active = false
     logger!(now, :refractory_period_ends, obj.id, obj.state)
