@@ -1,4 +1,4 @@
-using ADSP, Makie
+using ADSP, CairoMakie
 #include(joinpath(@__DIR__, "utils.jl"))
 include("utils.jl")
 
@@ -44,9 +44,9 @@ syn1 = filter(x->(x.object==:syn1), logger.data)
 syn2 = filter(x->(x.object==:syn2), logger.data)
 n    = filter(x->(x.object==:n), logger.data)
 
-steps!(ax1, [0;syn1.t;320], 1 .+ 0.9 .* [0;Int.(syn1.state);0], fill=:red)
-steps!(ax1, [0;syn2.t;320], 2 .+ 0.9 .* [0;Int.(syn2.state);0], fill=:blue)
-steps!(ax1, [0;n.t;320], 0.45 .* [0;Int.(n.state);0] , fill=:green)
+steps!(ax1, [0;syn1.t;450], 1 .+ 0.9 .* [0;Int.(syn1.state);0], fill=:red)
+steps!(ax1, [0;syn2.t;450], 2 .+ 0.9 .* [0;Int.(syn2.state);0], fill=:blue)
+steps!(ax1, [0;n.t;450], 0.45 .* [0;Int.(n.state);0] , fill=RGBAf0(0,1,0,0.5))
 
 ################################################################################
 config = """
@@ -84,10 +84,10 @@ syn2 = filter(x->(x.object==:syn2), logger.data)
 seg = filter(x->(x.object==:seg), logger.data)
 n    = filter(x->(x.object==:n), logger.data)
 
-steps!(ax2, [0;syn1.t;320], 1 .+ 0.9 .* [0;Int.(syn1.state);0], fill=:red)
-steps!(ax2, [0;seg.t;320], 1 .+ 0.9 .* [0;Int.(seg.state).-1;0], fill=RGBAf0(1,0,0,0.5))
-steps!(ax2, [0;syn2.t;320], 2 .+ 0.9 .* [0;Int.(syn2.state);0], fill=:blue)
-steps!(ax2, [0;n.t;320], 0.45 .* [0;Int.(n.state);0] , fill=:green)
+steps!(ax2, [0;syn1.t;450], 1 .+ 0.9 .* [0;Int.(syn1.state);0], fill=:red)
+steps!(ax2, [0;seg.t;450], 1 .+ 0.9 .* [0;Int.(seg.state).-1;0], fill=RGBAf0(1,0,0,0.5))
+steps!(ax2, [0;syn2.t;450], 2 .+ 0.9 .* [0;Int.(syn2.state);0], fill=:blue)
+steps!(ax2, [0;n.t;450], 0.45 .* [0;Int.(n.state);0] , fill=RGBAf0(0,1,0,0.5))
 
 ################################################################################
 
@@ -132,11 +132,11 @@ seg1 = filter(x->(x.object==:seg1), logger.data)
 seg2 = filter(x->(x.object==:seg2), logger.data)
 n    = filter(x->(x.object==:n), logger.data)
 
-steps!(ax3, [0;syn1.t;320], 1 .+ 0.9 .* [0;Int.(syn1.state);0], fill=:red)
-steps!(ax3, [0;seg1.t;320], 1 .+ 0.9 .* [0;Int.(seg1.state).-1;0], fill=RGBAf0(1,0,0,0.5))
-steps!(ax3, [0;syn2.t;320], 2 .+ 0.9 .* [0;Int.(syn2.state);0], fill=:blue)
-steps!(ax3, [0;seg2.t;320], 2 .+ 0.9 .* [0;Int.(seg2.state).-1;0], fill=RGBAf0(0,0,1,0.5))
-steps!(ax3, [0;n.t;320], 0.45 .* [0;Int.(n.state);0] , fill=:green)
+steps!(ax3, [0;syn1.t;450], 1 .+ 0.9 .* [0;Int.(syn1.state);0], fill=:red)
+steps!(ax3, [0;seg1.t;450], 1 .+ 0.9 .* [0;Int.(seg1.state).-1;0], fill=RGBAf0(1,0,0,0.5))
+steps!(ax3, [0;syn2.t;450], 2 .+ 0.9 .* [0;Int.(syn2.state);0], fill=:blue)
+steps!(ax3, [0;seg2.t;450], 2 .+ 0.9 .* [0;Int.(seg2.state).-1;0], fill=RGBAf0(0,0,1,0.5))
+steps!(ax3, [0;n.t;450], 0.45 .* [0;Int.(n.state);0] , fill=RGBAf0(0,1,0,0.5))
 
 ################################################################################
 
@@ -181,10 +181,10 @@ seg1 = filter(x->(x.object==:seg1), logger.data)
 seg2 = filter(x->(x.object==:seg2), logger.data)
 n    = filter(x->(x.object==:n), logger.data)
 
-steps!(ax4, [0;syn1.t;320], 1 .+ 0.9 .* [0;Int.(syn1.state);0], fill=:red)
-steps!(ax4, [0;seg1.t;320], 1 .+ 0.9 .* [0;Int.(seg1.state).-1;0], fill=RGBAf0(1,0,0,0.5))
-steps!(ax4, [0;syn2.t;320], 2 .+ 0.9 .* [0;Int.(syn2.state);0], fill=:blue)
-steps!(ax4, [0;seg2.t;320], 2 .+ 0.9 .* [0;Int.(seg2.state).-1;0], fill=RGBAf0(0,0,1,0.5))
-steps!(ax4, [0;n.t;320], 0.45 .* [0;Int.(n.state);0] , fill=:green)
+steps!(ax4, [0;syn1.t;450], 1 .+ 0.9 .* [0;Int.(syn1.state);0], fill=:red)
+steps!(ax4, [0;seg1.t;450], 1 .+ 0.9 .* [0;Int.(seg1.state).-1;0], fill=RGBAf0(1,0,0,0.5))
+steps!(ax4, [0;syn2.t;450], 2 .+ 0.9 .* [0;Int.(syn2.state);0], fill=:blue)
+steps!(ax4, [0;seg2.t;450], 2 .+ 0.9 .* [0;Int.(seg2.state).-1;0], fill=RGBAf0(0,0,1,0.5))
+steps!(ax4, [0;n.t;450], 0.45 .* [0;Int.(n.state);0] , fill=RGBAf0(0,1,0,0.5))
 
-save()
+save("coincidence.svg", fig)
