@@ -177,21 +177,22 @@ linesegments!(ax1, repeat(n5_spikes.t,inner=2), repeat(4 .+ [0,0.9], outer=lengt
 
 steps!(ax2, [0;seg_read_1.t;1000],    0 .+ 0.45 .* [0;Int.(seg_read_1.state);0],   fill=RGBAf0(0,1,0,0.5))
 steps!(ax2, [0;syn_read_1.t;1000],    0 .+ 0.9 .* [0;Int.(syn_read_1.state);0],   fill=RGBAf0(1,0,0,0.5))
-linesegments!(ax2, repeat(n_readout_1_spikes.t,inner=2), repeat(     [0,0.9], outer=length(n_readout_1_spikes.t)), linewidth=3, color=:teal)
+linesegments!(ax2, repeat(n_readout_1_spikes.t,inner=2), repeat(     [0,0.9], outer=length(n_readout_1_spikes.t)), linewidth=3, color=:yellow)
 
 steps!(ax2, [0;seg_read_2.t;1000],    1 .+ 0.45 .* [0;Int.(seg_read_2.state);0],   fill=RGBAf0(0,1,0,0.5))
 steps!(ax2, [0;syn_read_2.t;1000],    1 .+ 0.9 .* [0;Int.(syn_read_2.state);0],   fill=RGBAf0(1,0,0,0.5))
-linesegments!(ax2, repeat(n_readout_2_spikes.t,inner=2), repeat(1 .+ [0,0.9], outer=length(n_readout_2_spikes.t)), linewidth=3, color=:teal)
+linesegments!(ax2, repeat(n_readout_2_spikes.t,inner=2), repeat(1 .+ [0,0.9], outer=length(n_readout_2_spikes.t)), linewidth=3, color=:yellow)
 
 steps!(ax2, [0;seg_read_3.t;1000],    2 .+ 0.45 .* [0;Int.(seg_read_3.state);0],   fill=RGBAf0(0,1,0,0.5))
 steps!(ax2, [0;syn_read_3.t;1000],    2 .+ 0.9 .* [0;Int.(syn_read_3.state);0],   fill=RGBAf0(1,0,0,0.5))
-linesegments!(ax2, repeat(n_readout_3_spikes.t,inner=2), repeat(2 .+ [0,0.9], outer=length(n_readout_3_spikes.t)), linewidth=3, color=:teal)
+linesegments!(ax2, repeat(n_readout_3_spikes.t,inner=2), repeat(2 .+ [0,0.9], outer=length(n_readout_3_spikes.t)), linewidth=3, color=:yellow)
 
 steps!(ax2, [0;seg_read_4.t;1000],    3 .+ 0.45 .* [0;Int.(seg_read_4.state);0],   fill=RGBAf0(0,1,0,0.5))
 steps!(ax2, [0;syn_read_4.t;1000],    3 .+ 0.9 .* [0;Int.(syn_read_4.state);0],   fill=RGBAf0(1,0,0,0.5))
-linesegments!(ax2, repeat(n_readout_4_spikes.t,inner=2), repeat(3 .+ [0,0.9], outer=length(n_readout_4_spikes.t)), linewidth=3, color=:teal)
+linesegments!(ax2, repeat(n_readout_4_spikes.t,inner=2), repeat(3 .+ [0,0.9], outer=length(n_readout_4_spikes.t)), linewidth=3, color=:yellow)
 
 steps!(ax2, [0;seg_read_5.t;1000],    4 .+ 0.45 .* [0;Int.(seg_read_5.state);0],   fill=RGBAf0(0,1,0,0.5))
 steps!(ax2, [0;syn_read_5.t;1000],    4 .+ 0.9 .* [0;Int.(syn_read_5.state);0],   fill=RGBAf0(1,0,0,0.5))
-linesegments!(ax2, repeat(n_readout_5_spikes.t,inner=2), repeat(4 .+ [0,0.9], outer=length(n_readout_5_spikes.t)), linewidth=3, color=:teal)
+linesegments!(ax2, repeat(n_readout_5_spikes.t,inner=2), repeat(4 .+ [0,0.9], outer=length(n_readout_5_spikes.t)), linewidth=3, color=:yellow)
 
+save("stochastic_latch.svg", fig)
