@@ -1,4 +1,4 @@
-@testset "Loading from YAML tests" begin
+@testset "Standard synapse tests" begin
     test_net="""
 spike_duration: 0.1
 refractory_duration: 0.2
@@ -114,3 +114,56 @@ synapses:
     end
 end
 
+@testset "Bernoulli synapse tests" begin
+    test_net="""
+    spike_duration: 0.1
+    delay: 0.3
+    plateau_duration: 50.0
+
+    inputs:
+        - id: i1
+        - id: i2
+
+    neurons:
+        - id: n1
+
+    synapses:
+        - {id: syn1, source: i1, target: n1}
+        - {id: syn2, source: i2, target: n1, weight: 1.2345, spike_duration: 3.0, random_unsupported_synapse_stuff: nothing_of_relevance}
+        - {id: syn3, source: n1, target: n1, delay: 10.0, weight: [1.2345, 0.75]}
+    """
+    
+    (net,obj) = (
+        @test_logs (
+                :warn, "The following synapse parameters could not be parsed: random_unsupported_synapse_stuff"
+            ) load_network(YAML_source=test_net, weight_type=BernoulliSynapseWeight{Float64})
+        )
+
+    @testset "Synapse parameters tests" begin
+        @test obj[:syn1].id == :syn1
+        @test obj[:syn1].target == obj[:n1]
+        @test obj[:syn1].delay == 0.3
+        @test obj[:syn1].spike_duration == 0.1
+        @test isa(obj[:syn1].weight, BernoulliSynapseWeight{Float64}) && obj[:syn1].weight.magnitude ≈ 1.0 && obj[:syn1].weight.probability ≈ 1.0
+        @test obj[:syn2].id == :syn2
+        @test obj[:syn2].target == obj[:n1]
+        @test obj[:syn2].delay == 0.3
+        @test obj[:syn2].spike_duration == 3.0
+        @test isa(obj[:syn2].weight, BernoulliSynapseWeight{Float64}) && obj[:syn2].weight.magnitude ≈ 1.2345 && obj[:syn2].weight.probability ≈ 1.0
+        @test obj[:syn3].id == :syn3
+        @test obj[:syn3].target == obj[:n1]
+        @test obj[:syn3].delay == 10.0
+        @test obj[:syn3].spike_duration == 0.1
+        @test isa(obj[:syn3].weight, BernoulliSynapseWeight{Float64}) && obj[:syn3].weight.magnitude ≈ 1.2345 && obj[:syn3].weight.probability ≈ 0.75
+    end
+
+
+    @testset "Saving tests" begin
+        tmp_str = save_network(net)
+        println(tmp_str)
+        (net2,obj2) = @test_logs  load_network(YAML_source=tmp_str, weight_type=BernoulliSynapseWeight{Float64})
+        @test all(pairs(obj2)) do (key,value)
+            key ∈ keys(obj)
+        end
+    end
+end

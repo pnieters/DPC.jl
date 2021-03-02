@@ -1,4 +1,4 @@
-export Synapse, Segment, Neuron, Network, Input, Logger
+export Synapse, Segment, Neuron, Network, Input, Logger, BernoulliSynapseWeight
 using DataFrames: DataFrame
 
 
@@ -51,7 +51,7 @@ mutable struct Synapse{ID,T,WT,IT} <: AbstractSynapse{ID,T,WT,IT}
 
     function Synapse(
                 id::ID, source, target::NeuronOrSegmentOrOutput{ID,T,WT,IT}; 
-                delay::T = source.net.default_delay, spike_duration::T = source.net.default_spike_duration, weight::WT=one(IT)
+                delay::T = source.net.default_delay, spike_duration::T = source.net.default_spike_duration, weight::WT=one(WT)
             ) where {ID,T,WT,IT}
         this = new{ID,T,WT,IT}(id, target, delay, spike_duration, weight, zero(IT), false, source.net)
         push!(source.synapses, this)
@@ -59,6 +59,11 @@ mutable struct Synapse{ID,T,WT,IT} <: AbstractSynapse{ID,T,WT,IT}
     end
 end
 sample_spike_magnitude(weight)=weight
+
+"""
+Fallback: let YAML.jl handle it.
+"""
+serialize(w) = w
 
 mutable struct Neuron{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
     id::ID
@@ -457,3 +462,21 @@ Base.show(io::IO, x::Input)    = print(io, "Input '$(x.id)' with $(length(x.syna
 Base.show(io::IO, x::Output)   = print(io, "Output '$(x.id)'")
 Base.show(io::IO, x::Segment)  = print(io, "Segment '$(x.id)' with $(length(x.next_upstream)) child-segments")
 Base.show(io::IO, x::Synapse)  = print(io, "Synapse '$(x.id)' (connects to $(x.target.id))")
+
+################################################################################
+## Probabilistic synapse implementation                                       ##
+################################################################################
+
+struct BernoulliSynapseWeight{T}
+    magnitude::T
+    probability::Float64
+end
+Base.one(::Type{BernoulliSynapseWeight{T}}) where T = BernoulliSynapseWeight(one(T), 1.0)
+# Add parser for just a number
+BernoulliSynapseWeight{T}(x::T) where {T} = BernoulliSynapseWeight(x, 1.0)
+# Add parser for a tuple or vector (magnitude,probability)
+BernoulliSynapseWeight{T}(x::Union{Tuple,Vector}) where {T} = BernoulliSynapseWeight(x...)
+# generate a stochastic EPSP magnitude
+sample_spike_magnitude(w::BernoulliSynapseWeight{T}) where {T} = (w.probability ≥ 1.0 || rand() ≤ w.probability) ? w.magnitude : zero(T)
+# add serialization
+serialize(w::BernoulliSynapseWeight{T}) where {T} = [w.magnitude, w.probability]
