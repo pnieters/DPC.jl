@@ -236,8 +236,8 @@ function update_state!(obj::Segment)
     obj.state = if obj.active || (isa(obj.next_downstream, Segment) && obj.next_downstream.state == voltage_high)
         # active or passively held high by downstream segment
         voltage_high
-    elseif isempty(obj.next_upstream) || obj.state_seg >= obj.θ_seg
-        # elevated voltage due to synaptic input and enough upstream input
+    elseif obj.state_seg >= obj.θ_seg
+        # elevated voltage due to enough upstream input
         voltage_elevated
     else
         voltage_low
@@ -371,26 +371,30 @@ end
 """Check if an incoming spike should trigger an EPSP"""
 function on!(obj::Synapse, now, queue!, logger!)
     if ~obj.state
-        @debug "$(now): Triggered synapse $(obj.id) and started an EPSP!"
-        obj.state = true
         # set the synapse's state for this spike
         obj.magnitude = sample_spike_magnitude(obj.weight)
-        # inform the target segment about this new EPSP
-        obj.target.state_syn += obj.magnitude
-        logger!(now, :epsp_starts, obj.id, obj.state)
+        if obj.magnitude ≈ zero(obj.magnitude)
+            @debug "$(now): Triggered synapse $(obj.id), but didn't start an EPSP!"
+        else
+            @debug "$(now): Triggered synapse $(obj.id) and started an EPSP!"
+            obj.state = true
+            # inform the target segment about this new EPSP
+            obj.target.state_syn += obj.magnitude
+            logger!(now, :epsp_starts, obj.id, obj.state)
 
-        # don't forget to turn off EPSP
-        queue!(Event(:epsp_ends, now, now+obj.spike_duration, obj))
+            # don't forget to turn off EPSP
+            queue!(Event(:epsp_ends, now, now+obj.spike_duration, obj))
 
-        # if the spike was excitatory this EPSP might have triggered a plateau in the target
-        # else if it was inhibitory this EPSP may have destroyed any ongoing plateau
-        if obj.magnitude > zero(obj.magnitude)
-            maybe_on!(obj.target, now,  queue!, logger!)
-        elseif obj.magnitude < zero(obj.magnitude)
-            maybe_off!(obj.target, now,  queue!, logger!)
+            # if the spike was excitatory this EPSP might have triggered a plateau in the target
+            # else if it was inhibitory this EPSP may have destroyed any ongoing plateau
+            if obj.magnitude > zero(obj.magnitude)
+                maybe_on!(obj.target, now,  queue!, logger!)
+            elseif obj.magnitude < zero(obj.magnitude)
+                maybe_off!(obj.target, now,  queue!, logger!)
+            end
         end
     else
-        @debug "$(now): Triggered synapse $(obj.id), but didn't start an EPSP!"
+        @debug "$(now): Triggered synapse $(obj.id), but synapse was already active!"
     end
     return nothing
 end
