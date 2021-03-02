@@ -1,6 +1,12 @@
 #ENV["JULIA_DEBUG"] = "ADSP"
-using ADSP, Makie
+using ADSP, CairoMakie
+include("utils.jl")
 
+fig = Figure(resolution = (1200, 900))
+ax1 = fig[1, 1] = Axis(fig, title = "Single neuron latch")
+ax2 = fig[2, 1] = Axis(fig, title = "Two neuron latch")
+
+################################################################################
 config = """
 refractory_duration: 5.01
 inputs:
@@ -11,7 +17,7 @@ neurons:
 - id: n_storage
 synapses:
 - {id: syn1, source: i_set, target: n_storage}
-- {id: syn2, source: i_reset, target: n_storage, weight: -10}
+- {id: syn2, source: i_reset, target: n_storage, weight: -10, spike_duration: 10}
 - {id: syn3, source: n_storage, target: n_storage}
 """
 
@@ -22,9 +28,15 @@ input=sort!([
     [Event(:input_spikes, 0.0,  t, objects[:i_reset]) for t ∈ [400.0, 800.0]];
 ])
 
-logger=simulate!(net, input)
+logger=simulate!(net, input, 1000)
+n    = filter(x->(x.object==:n_storage), logger.data)
+syn1   = filter(x->(x.object==:syn1), logger.data)
+syn2   = filter(x->(x.object==:syn2), logger.data)
 
-n    = filter(x->(x.object==:n_storage && x.event==:spikes), logger.data)[!, :t]
+steps!(ax1, [0;syn1.t;1000], 1 .+ 0.45 .* [0;Int.(syn1.state);0] , fill=RGBAf0(1,0,0,0.5))
+steps!(ax1, [0;syn2.t;1000], 2 .+ 0.45 .* [0;Int.(syn2.state);0] , fill=RGBAf0(0,0,1,0.5))
+steps!(ax1, [0;n.t;1000], 0.45 .* [0;Int.(n.state);0] , fill=RGBAf0(0,1,0,0.5))
+
 ################################################################################
 
 config = """
@@ -41,7 +53,7 @@ neurons:
     - id: seg_readout
 synapses:
 - {id: syn1, source: i_set, target: n_storage}
-- {id: syn2, source: i_reset, target: n_storage, weight: -10}
+- {id: syn2, source: i_reset, target: n_storage, weight: -10, spike_duration: 10}
 - {id: syn3, source: n_storage, target: n_storage}
 - {id: syn4, source: n_storage, target: seg_readout}
 - {id: syn5, source: i_read, target: n_readout}
@@ -57,6 +69,18 @@ input=sort!([
 
 logger=simulate!(net, input)
 
-n_storage   = filter(x->(x.object==:n_storage && x.event==:spikes), logger.data)[!, :t]
-n_readout   = filter(x->(x.object==:n_readout && x.event==:spikes), logger.data)[!, :t]
+n_storage   = filter(x->(x.object==:n_storage), logger.data)
+n_readout   = filter(x->(x.object==:n_readout), logger.data)
+syn1   = filter(x->(x.object==:syn1), logger.data)
+syn2   = filter(x->(x.object==:syn2), logger.data)
+syn3   = filter(x->(x.object==:syn5), logger.data)
+
+
+steps!(ax2, [0;syn1.t;1000], 3 .+ 0.45 .* [0;Int.(syn1.state);0] , fill=RGBAf0(1,0,0,0.5))
+steps!(ax2, [0;syn2.t;1000], 4 .+ 0.45 .* [0;Int.(syn2.state);0] , fill=RGBAf0(0,0,1,0.5))
+steps!(ax2, [0;syn3.t;1000], 1 .+ 0.45 .* [0;Int.(syn3.state);0] , fill=RGBAf0(1,0,1,0.5))
+steps!(ax2, [0;n_storage.t;1000], 2 .+ 0.45 .* [0;Int.(n_storage.state);0] , fill=RGBAf0(0,1,0,0.5))
+steps!(ax2, [0;n_readout.t;1000], 0.45 .* [0;Int.(n_readout.state);0] , fill=RGBAf0(0,1,1,0.5))
+
 ################################################################################
+save("latch.svg", fig)
