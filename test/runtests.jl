@@ -1,6 +1,11 @@
 using ADSP, Test
 
 @testset "All unit tests" begin
-    include("loading_tests.jl")
-    include("running_tests.jl")
+    @testset "YAML-loading tests" begin
+        include("loading_tests.jl")
+    end
+
+    @testset "Functionality tests" begin
+        include("running_tests.jl")
+    end
 end

@@ -1,4 +1,4 @@
-export Synapse, Segment, Neuron, Network, Input, Logger
+export Synapse, Segment, Neuron, Network, Input, Logger, BernoulliSynapseWeight
 using DataFrames: DataFrame
 
 
@@ -51,7 +51,7 @@ mutable struct Synapse{ID,T,WT,IT} <: AbstractSynapse{ID,T,WT,IT}
 
     function Synapse(
                 id::ID, source, target::NeuronOrSegmentOrOutput{ID,T,WT,IT}; 
-                delay::T = source.net.default_delay, spike_duration::T = source.net.default_spike_duration, weight::WT=one(IT)
+                delay::T = source.net.default_delay, spike_duration::T = source.net.default_spike_duration, weight::WT=one(WT)
             ) where {ID,T,WT,IT}
         this = new{ID,T,WT,IT}(id, target, delay, spike_duration, weight, zero(IT), false, source.net)
         push!(source.synapses, this)
@@ -59,6 +59,11 @@ mutable struct Synapse{ID,T,WT,IT} <: AbstractSynapse{ID,T,WT,IT}
     end
 end
 sample_spike_magnitude(weight)=weight
+
+"""
+Fallback: let YAML.jl handle it.
+"""
+serialize(w) = w
 
 mutable struct Neuron{ID,T,WT,IT} <: NeuronOrSegment{ID,T,WT,IT}
     id::ID
@@ -231,8 +236,8 @@ function update_state!(obj::Segment)
     obj.state = if obj.active || (isa(obj.next_downstream, Segment) && obj.next_downstream.state == voltage_high)
         # active or passively held high by downstream segment
         voltage_high
-    elseif isempty(obj.next_upstream) || obj.state_seg >= obj.θ_seg
-        # elevated voltage due to synaptic input and enough upstream input
+    elseif obj.state_seg >= obj.θ_seg
+        # elevated voltage due to enough upstream input
         voltage_elevated
     else
         voltage_low
@@ -245,7 +250,7 @@ end
 function maybe_on!(obj::Segment, now, queue!, logger!)
     update_state!(obj)
     # if the segment is currently off, but the plateau conditions are satisfied, turn on
-    return if ~obj.active && obj.state == voltage_elevated && obj.state_syn >= obj.θ_syn
+    return if ~obj.active && obj.state_syn >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state == voltage_elevated)
         @debug "$(now): Triggered segment $(obj.id) and it turned on!"
         
         # The segment is now active
@@ -257,7 +262,10 @@ function maybe_on!(obj::Segment, now, queue!, logger!)
 
         # turning on this segment might have also turned on the next_downstream segment
         obj.next_downstream.state_seg += 1
-        maybe_on!(obj.next_downstream, now, queue!, logger!)
+        updated = update_state!(obj.next_downstream)
+        if ~maybe_on!(obj.next_downstream, now, queue!, logger!) && updated
+            logger!(now, :upstate_start, obj.next_downstream.id, obj.next_downstream.state)
+        end
         
         # Each segment must turn off
         queue!(Event(:plateau_ends, now, now+obj.plateau_duration, obj))
@@ -284,7 +292,9 @@ function maybe_off!(obj::Segment, now, queue!, logger!)
 
         # update next_downstream segment
         obj.next_downstream.state_seg -= 1
-        update_state!(obj.next_downstream)
+        if update_state!(obj.next_downstream)
+            logger!(now, :upstate_ends, obj.next_downstream.id, obj.next_downstream.state)
+        end
     else
         @debug "$(now): Triggered segment $(obj.id), but it didn't turn off!"
     end
@@ -303,7 +313,9 @@ end
 
 function update_state!(obj::Neuron)
     old_state = obj.state
-    obj.state = if isempty(obj.next_upstream) || obj.state_seg >= obj.θ_seg
+    obj.state = if obj.active 
+        voltage_high
+    elseif obj.state_seg >= obj.θ_seg
         # elevated voltage due to enough upstream input
         voltage_elevated
     else
@@ -317,10 +329,11 @@ end
 function maybe_on!(obj::Neuron, now, queue!, logger!)
     update_state!(obj)
 
-    if ~obj.active && obj.state_syn >= obj.θ_syn && obj.state == voltage_elevated
+    return if ~obj.active && obj.state_syn >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state == voltage_elevated)
         @debug "$(now): Triggered neuron $(obj.id) and it fired a spike!"
 
         obj.active = true
+        obj.state = voltage_high
         logger!(now, :spikes, obj.id, obj.state)
 
         # trigger all synapses
@@ -330,22 +343,27 @@ function maybe_on!(obj::Neuron, now, queue!, logger!)
 
         # don't forget to recover from refractory period
         queue!(Event(:refractory_period_ends, now, now+obj.refractory_duration, obj))
+        true
     else
         @debug "$(now): Triggered neuron $(obj.id), but didn't fire!"
+        false
     end
-    return false
 end
 
 """Check if this neuron was re-triggered to spike after refractoriness"""
 function maybe_off!(obj::Neuron, now, queue!, logger!)
-    @debug "$(now): Neuron $(obj.id) came out of refractoriness!"
-    update_state!(obj)
-    
-    obj.active = false
-    logger!(now, :refractory_period_ends, obj.id, obj.state)
+    return if obj.active
+        @debug "$(now): Neuron $(obj.id) came out of refractoriness!"
+        obj.active = false
+        update_state!(obj)
+        logger!(now, :refractory_period_ends, obj.id, obj.state)
 
-    # check if the neuron should spike again, right away
-    maybe_on!(obj::Neuron, now, queue!, logger!)
+        # check if the neuron should spike again, right away
+        maybe_on!(obj::Neuron, now, queue!, logger!)
+    else 
+        @debug "$(now): Triggered Neuron $(obj.id), but was already out of refractoriness!"
+        false
+    end
 end
 
 
@@ -353,26 +371,30 @@ end
 """Check if an incoming spike should trigger an EPSP"""
 function on!(obj::Synapse, now, queue!, logger!)
     if ~obj.state
-        @debug "$(now): Triggered synapse $(obj.id) and started an EPSP!"
-        obj.state = true
         # set the synapse's state for this spike
         obj.magnitude = sample_spike_magnitude(obj.weight)
-        # inform the target segment about this new EPSP
-        obj.target.state_syn += obj.magnitude
-        logger!(now, :epsp_starts, obj.id, obj.state)
+        if obj.magnitude ≈ zero(obj.magnitude)
+            @debug "$(now): Triggered synapse $(obj.id), but didn't start an EPSP!"
+        else
+            @debug "$(now): Triggered synapse $(obj.id) and started an EPSP!"
+            obj.state = true
+            # inform the target segment about this new EPSP
+            obj.target.state_syn += obj.magnitude
+            logger!(now, :epsp_starts, obj.id, obj.state)
 
-        # don't forget to turn off EPSP
-        queue!(Event(:epsp_ends, now, now+obj.spike_duration, obj))
+            # don't forget to turn off EPSP
+            queue!(Event(:epsp_ends, now, now+obj.spike_duration, obj))
 
-        # if the spike was excitatory this EPSP might have triggered a plateau in the target
-        # else if it was inhibitory this EPSP may have destroyed any ongoing plateau
-        if obj.magnitude > zero(obj.magnitude)
-            maybe_on!(obj.target, now,  queue!, logger!)
-        elseif obj.magnitude < zero(obj.magnitude)
-            maybe_off!(obj.target, now,  queue!, logger!)
+            # if the spike was excitatory this EPSP might have triggered a plateau in the target
+            # else if it was inhibitory this EPSP may have destroyed any ongoing plateau
+            if obj.magnitude > zero(obj.magnitude)
+                maybe_on!(obj.target, now,  queue!, logger!)
+            elseif obj.magnitude < zero(obj.magnitude)
+                maybe_off!(obj.target, now,  queue!, logger!)
+            end
         end
     else
-        @debug "$(now): Triggered synapse $(obj.id), but didn't start an EPSP!"
+        @debug "$(now): Triggered synapse $(obj.id), but synapse was already active!"
     end
     return nothing
 end
@@ -444,3 +466,21 @@ Base.show(io::IO, x::Input)    = print(io, "Input '$(x.id)' with $(length(x.syna
 Base.show(io::IO, x::Output)   = print(io, "Output '$(x.id)'")
 Base.show(io::IO, x::Segment)  = print(io, "Segment '$(x.id)' with $(length(x.next_upstream)) child-segments")
 Base.show(io::IO, x::Synapse)  = print(io, "Synapse '$(x.id)' (connects to $(x.target.id))")
+
+################################################################################
+## Probabilistic synapse implementation                                       ##
+################################################################################
+
+struct BernoulliSynapseWeight{T}
+    magnitude::T
+    probability::Float64
+end
+Base.one(::Type{BernoulliSynapseWeight{T}}) where T = BernoulliSynapseWeight(one(T), 1.0)
+# Add parser for just a number
+BernoulliSynapseWeight{T}(x::T) where {T} = BernoulliSynapseWeight(x, 1.0)
+# Add parser for a tuple or vector (magnitude,probability)
+BernoulliSynapseWeight{T}(x::Union{Tuple,Vector}) where {T} = BernoulliSynapseWeight(x...)
+# generate a stochastic EPSP magnitude
+sample_spike_magnitude(w::BernoulliSynapseWeight{T}) where {T} = (w.probability ≥ 1.0 || rand() ≤ w.probability) ? w.magnitude : zero(T)
+# add serialization
+serialize(w::BernoulliSynapseWeight{T}) where {T} = [w.magnitude, w.probability]

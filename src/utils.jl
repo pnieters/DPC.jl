@@ -1,6 +1,5 @@
 import YAML
 using DataStructures: OrderedDict
-#, DifferentialEquations
 
 export generateRFSpikes, generateSpikeVolleys, plot_spike_raster, sample_inhomogeneous_poisson, generateEventsFromSpikes, load_network, save_network
 
@@ -328,7 +327,7 @@ function save_network(net::Network{id_type, time_type, weight_type, synaptic_inp
         syn["target"] = synapse.target.id
         syn["delay"] = synapse.delay
         syn["spike_duration"] = synapse.spike_duration
-        syn["weight"] = synapse.weight
+        syn["weight"] = serialize(synapse.weight)
         return syn
     end
 
