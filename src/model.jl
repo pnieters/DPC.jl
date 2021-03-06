@@ -1,4 +1,4 @@
-export Synapse, Segment, Neuron, Network, Input, Logger, BernoulliSynapseWeight
+export Synapse, Segment, Neuron, NeuronOrSegment,NeuronOrSegmentOrOutput,AbstractNetwork,AbstractSynapse, Network, Input, Logger, BernoulliSynapseWeight
 using DataFrames: DataFrame
 
 
@@ -475,6 +475,8 @@ struct BernoulliSynapseWeight{T}
     magnitude::T
     probability::Float64
 end
+Base.:>=(w::BernoulliSynapseWeight, other::BernoulliSynapseWeight) = w.magnitude >= other.magnitude
+Base.:>=(w::BernoulliSynapseWeight, x) = w.magnitude >= x
 Base.one(::Type{BernoulliSynapseWeight{T}}) where T = BernoulliSynapseWeight(one(T), 1.0)
 # Add parser for just a number
 BernoulliSynapseWeight{T}(x::T) where {T} = BernoulliSynapseWeight(x, 1.0)
