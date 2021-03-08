@@ -2,6 +2,11 @@ using AbstractPlotting
 import ColorTypes: RGB
 import DataStructures: DefaultDict
 
+pal = AbstractPlotting.Palette(:Dark2)
+set_theme!(Theme(
+    color = pal
+))
+
 @recipe(Steps, t, y) do scene
     Theme(
         color = :black,
@@ -40,7 +45,7 @@ end
 Port{W}(name::I) where {W,I} = Port{W,I}(name)
 
 
-function AbstractPlotting.default_theme(scene::AbstractPlotting.SceneLike, ::Type{<: AbstractPlotting.Plot(Neuron)})
+function AbstractPlotting.default_theme(scene::AbstractPlotting.SceneLike, ::Type{<: AbstractPlotting.Plot(Neuron,Dict{Symbol,Vector{Port}})})
     Theme(
         color=RGB(0.9,0.9,0.9),
         branch_width=0.1,
@@ -48,15 +53,21 @@ function AbstractPlotting.default_theme(scene::AbstractPlotting.SceneLike, ::Typ
         angle_between=10/180*pi,
         show_port_labels=true,
         xticks = [],
+        root_position = Point2f0(0,0),
         port_marker = x -> (marker=isa(x,Port{:pos}) ? "▲" : "o", color=RGB(0.9,0.9,0.9)),
         port_label = x -> (x.name, Point2f0(-0.1,-0.1), :textsize=>0.25, :align=>(:right,:center))
     )
 end
 
-function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron{ID,T,WT,IT})) where {ID,T,WT,IT}
+function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symbol,Vector{Port}}))
     # get the actual object to plot
     tree = to_value(treeplot[1])
-
+    # get position of the root = offset of all nodes
+    offset = treeplot[:root_position]
+    
+    # get the ports to plot
+    ports = to_value(treeplot[2])
+    
     # if obj is an observable dict-type holding named values, get named value ...
     maybe_get(obj::Node, key) = if isa(obj[],Union{DefaultDict,Dict})
         @lift $obj[key]
@@ -69,18 +80,19 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron{ID,T,WT,I
     # ... otherwise return the obj itself
     maybe_get(obj, key) = obj
 
-    function serialize_tree(tree, l, ω)
+    
+    function serialize_tree(tree::NeuronOrSegment{ID,T,WT,IT}, l, ω) where {ID,T,WT,IT}
         sectors = Float64[]
         depths = Float64[]
         all_points = Vector{Pair{ID,Point2f0}}[]
         all_points_flat = Pair{ID,Point2f0}[]
-        all_ports_flat = Pair{ID,Vector{Port}}[tree.id=>[Port{syn.weight ≥ 0 ? :pos : :neg}(syn.id) for syn ∈ tree.synapses]]
+        all_ports_flat = Pair{Port,Point2f0}[]
         all_parents_flat = Pair{ID,ID}[]
 
         # go through all branches once to collect information
         for subtree in tree.next_upstream
             # get angle and depth of sector
-            α,d,points,ports,parents = serialize_tree(subtree, l, ω)
+            α,d,points,_ports,parents = serialize_tree(subtree, l, ω)
             # compute depth of new sector
             ll = maybe_get(l, subtree.id)
             c = √(ll^2+d^2-2*ll*d*cos(π-α/2))
@@ -90,8 +102,8 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron{ID,T,WT,I
             push!(sectors, β+ maybe_get(ω, subtree.id))
             push!(depths, c)
             push!(all_points, points)
-            append!(all_ports_flat, ports)
             append!(all_parents_flat, parents)
+            append!(all_ports_flat, _ports)
             push!(all_parents_flat, subtree.id=>tree.id)
         end
 
@@ -102,19 +114,28 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron{ID,T,WT,I
         # calculate angles for all branches
         branch_angles = cumsum(sectors) .- sectors./2 .- sector/2
 
-        # go through all branches again and apply branch-specific transformations
         for (branch, branch_angle, points) in zip(tree.next_upstream, branch_angles, all_points)
+            branch_ports = get(ports, branch.id, [])
             # shift by l and rotate by `branch_angle`
             c=cos(branch_angle)
             s=sin(branch_angle)
-            transform = ((x,y),) -> (c*x-s*(y+l),s*x+c*(y+l))
-
+            transform = ((x,y),) -> Point2f0(c*x-s*(y+l),s*x+c*(y+l))
+    
+            branch_end = transform(Point2f0(0.0,0.0))
             # add branch for branch
-            push!(all_points_flat, branch.id=>transform(Point2f0(0.0,0.0)))
-            
+            push!(all_points_flat, branch.id=>branch_end)
+    
+            # add ports for branch
+            append!(all_ports_flat, Pair.(branch_ports, LinRange(Point2f0(0,0), branch_end, length(branch_ports)+2)[2:end-1]))
+    
             # keep branches from branches' subtree
             if !isempty(points)            
                 append!(all_points_flat, map(((name,pts),) -> name=>transform(pts), points))
+            end
+    
+            # keep ports from branches' subtree
+            if !isempty(ports)            
+                append!(all_ports_flat, map(((prt,pos),) -> prt=>transform(pos), ports))
             end
         end
 
@@ -126,10 +147,14 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron{ID,T,WT,I
     # get all nodes, their ports and parents in flat format
     serialized = lift(treeplot[:branch_length],treeplot[:angle_between]) do l,ω
         ser=serialize_tree(tree,l,ω)
-        push!(ser.nodes, tree.name => Point2f0(0.0,0.0))
+        push!(ser.nodes, tree.id => Point2f0(0.0,0.0))
         ser
     end
-    parent = DefaultDict(tree.name, serialized[].parents...)
+    parent = DefaultDict(tree.id, serialized[].parents...)
+    # get all the positions of the ports
+    ports = lift(serialized,offset) do ser,off
+        foreach(p->p[2] += off, ser.ports)
+    end
 
     # plot branches
     for (name,parent_name) in serialized[].parents
@@ -138,13 +163,13 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron{ID,T,WT,I
         w2 = maybe_get(treeplot[:branch_width], parent_name)
 
         # dynamically recompute polygon
-        branch_poly = lift(w1, w2, serialized) do w1,w2,ser
+        branch_poly = lift(w1, w2, serialized, offset) do w1,w2,ser,off
             node_dict = Dict(ser.nodes...)
             b1 = node_dict[name]
             b2 = node_dict[parent_name]
             normal = [0 1; -1 0]*(b2-b1)
             normal /= sqrt(normal'*normal)*2
-            Point2f0[
+            Ref(off) .+ Point2f0[
                 -normal*w1+b1,
                  normal*w1+b1,
                  normal*w2+b2,
@@ -153,25 +178,38 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron{ID,T,WT,I
         end
         
         # draw polygon for the branch
-        poly!(treeplot, branch_poly, color=c)
+        poly!(treeplot, branch_poly, color=c, strokewidth = 1, strokecolor=c)
 
         # draw circle to cap off branch
-        poly!(treeplot, lift(w2,serialized) do w2,ser
+        poly!(treeplot, lift(w1,serialized, offset) do w1,ser,off
             node_dict = Dict(ser.nodes...)
             b2 = node_dict[name]
-            Circle(b2, w2/2)
-        end, color=c)
+            Circle(off + b2, w1/2)
+        end, color=c, strokewidth = 1, strokecolor=c)
     end
 
     # draw polygon for the root
-    c = maybe_get(treeplot[:color], tree.name)
-    w = maybe_get(treeplot[:branch_width], tree.name)
-    root_poly = lift(w) do w
-        Point2f0[(-w/2*√(3), -w/2), (0,w), (w/2*√(3), -w/2)]
+    c = maybe_get(treeplot[:color], tree.id)
+    w = maybe_get(treeplot[:branch_width], tree.id)
+    root_poly = lift(w,offset) do w,offset
+        Point2f0[(-2w/2*√(3), -2w/2), (0,2w), (2w/2*√(3), -2w/2)].+offset
     end
-    println(c)
-    poly!(treeplot, root_poly, color=c)
-   
+    poly!(treeplot, root_poly, color=c, strokewidth = 1, strokecolor=c)
+
+    treeplot.attributes[:ports] = ports
     treeplot
 end
+
+
+# """
+# Computes diameters for branches to satisfy Rall's condition.
+# """
+# function get_branch_diameters(tree::Branch{I}; own_diam=1.0, diams=Dict{I,Float64}()) where {I}
+#     diams[tree.name] = own_diam
+#     child_diam = (own_diam^(3/2)/length(tree.branches))^(2/3)
+#     for child in tree.branches
+#         get_branch_diameters(child; own_diam=child_diam, diams=diams)
+#     end
+#     return diams
+# end
 
