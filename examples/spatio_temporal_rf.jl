@@ -2,13 +2,6 @@ using ADSP, CairoMakie
 include("utils.jl")
 
 
-color_1 = pal.colors[1]
-color_1_50 = RGBAf0(color_1.r,color_1.g,color_1.b,0.5)
-color_1_25 = RGBAf0(color_1.r,color_1.g,color_1.b,0.25)
-color_2 = pal.colors[2]
-color_2_50 = RGBAf0(color_2.r,color_2.g,color_2.b,0.5)
-color_2_25 = RGBAf0(color_2.r,color_2.g,color_2.b,0.25)
-
 config = """
 refractory_duration: 5.01
 plateau_duration: 100
@@ -91,7 +84,7 @@ idx = sortperm(manual_ticks)
 ax1.xticks = manual_ticks[idx]
 ax1.xtickformat = x->manual_labels[idx]
 ax1.yticks = [-7.5, -2.5]
-ax1.ytickformat = x->["soma", "seg."]
+ax1.ytickformat = x->["soma", "dend."]
 
 function make_rf((x₀,y₀), σ)
     function rf(x,y)
