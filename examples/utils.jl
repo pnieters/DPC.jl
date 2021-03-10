@@ -76,7 +76,7 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symb
     offset = treeplot[:root_position]
     
     # get the ports to plot
-    ports = to_value(treeplot[2])
+    given_ports = to_value(treeplot[2])
     
     # if obj is an observable dict-type holding named values, get named value ...
     maybe_get(obj::Node, key) = if isa(obj[],Union{DefaultDict,Dict})
@@ -95,6 +95,7 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symb
         sectors = Float64[]
         depths = Float64[]
         all_points = Vector{Pair{ID,Point2f0}}[]
+        all_ports = Vector{Pair{ID,Point2f0}}[]
         all_points_flat = Pair{ID,Point2f0}[]
         all_ports_flat = Pair{Port,Point2f0}[]
         all_parents_flat = Pair{ID,ID}[]
@@ -102,7 +103,7 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symb
         # go through all branches once to collect information
         for subtree in tree.next_upstream
             # get angle and depth of sector
-            α,d,points,_ports,parents = serialize_tree(subtree, l, ω)
+            α,d,points,ports,parents = serialize_tree(subtree, l, ω)
             # compute depth of new sector
             ll = maybe_get(l, subtree.id)
             c = √(ll^2+d^2-2*ll*d*cos(π-α/2))
@@ -112,8 +113,8 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symb
             push!(sectors, β+ maybe_get(ω, subtree.id))
             push!(depths, c)
             push!(all_points, points)
+            push!(all_ports, ports)
             append!(all_parents_flat, parents)
-            append!(all_ports_flat, _ports)
             push!(all_parents_flat, subtree.id=>tree.id)
         end
 
@@ -124,8 +125,7 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symb
         # calculate angles for all branches
         branch_angles = cumsum(sectors) .- sectors./2 .- sector/2
 
-        for (branch, branch_angle, points) in zip(tree.next_upstream, branch_angles, all_points)
-            branch_ports = get(ports, branch.id, [])
+        for (branch, branch_angle, points, ports) in zip(tree.next_upstream, branch_angles, all_points, all_ports)
             # shift by l and rotate by `branch_angle`
             c=cos(branch_angle)
             s=sin(branch_angle)
@@ -136,7 +136,8 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symb
             push!(all_points_flat, branch.id=>branch_end)
     
             # add ports for branch
-            append!(all_ports_flat, Pair.(branch_ports, LinRange(Point2f0(0,0), branch_end, length(branch_ports)+2)[2:end-1]))
+            num_branch_ports = length(get(given_ports, branch.id, []))
+            append!(all_ports_flat, Pair.(branch_ports, LinRange(Point2f0(0,0), branch_end, num_branch_ports+2)[2:end-1]))
     
             # keep branches from branches' subtree
             if !isempty(points)            
