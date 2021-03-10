@@ -55,7 +55,7 @@ end
 Port{W}(name::I) where {W,I} = Port{W,I}(name)
 
 
-function AbstractPlotting.default_theme(scene::AbstractPlotting.SceneLike, ::Type{<: AbstractPlotting.Plot(Neuron,Dict{Symbol,Vector{Port}})})
+function AbstractPlotting.default_theme(scene::AbstractPlotting.SceneLike, ::Type{<: AbstractPlotting.Plot(Neuron)})
     Theme(
         color=RGB(0.9,0.9,0.9),
         branch_width=0.1,
@@ -63,19 +63,16 @@ function AbstractPlotting.default_theme(scene::AbstractPlotting.SceneLike, ::Typ
         angle_between=10/180*pi,
         xticks = [],
         root_position = Point2f0(0,0),
-        port_marker = x -> (marker=isa(x,Port{:pos}) ? "▲" : "o", color=RGB(0.9,0.9,0.9)),
-        port_label = x -> (x.name, Point2f0(-0.1,-0.1), :textsize=>0.25, :align=>(:right,:center))
+        ports = Dict{Symbol,Vector{Symbol}}()
     )
 end
 
-function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symbol,Vector{Port}}))
+
+function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron))
     # get the actual object to plot
     tree = to_value(treeplot[1])
     # get position of the root = offset of all nodes
     offset = treeplot[:root_position]
-    
-    # get the ports to plot
-    given_ports = to_value(treeplot[2])
     
     # if obj is an observable dict-type holding named values, get named value ...
     maybe_get(obj::Node, key) = if isa(obj[],Union{DefaultDict,Dict})
@@ -90,7 +87,7 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symb
     maybe_get(obj, key) = obj
 
     
-    function serialize_tree(tree::NeuronOrSegment{ID,T,WT,IT}, l, ω) where {ID,T,WT,IT}
+    function serialize_tree(tree::NeuronOrSegment{ID,T,WT,IT}, l, ω, given_ports) where {ID,T,WT,IT}
         sectors = Float64[]
         depths = Float64[]
         all_points = Vector{Pair{ID,Point2f0}}[]
@@ -102,7 +99,7 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symb
         # go through all branches once to collect information
         for subtree in tree.next_upstream
             # get angle and depth of sector
-            α,d,points,ports,parents = serialize_tree(subtree, l, ω)
+            α,d,points,ports,parents = serialize_tree(subtree, l, ω, given_ports)
             # compute depth of new sector
             ll = maybe_get(l, subtree.id)
             c = √(ll^2+d^2-2*ll*d*cos(π-α/2))
@@ -155,15 +152,15 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symb
 
 
     # get all nodes, their ports and parents in flat format
-    serialized = lift(treeplot[:branch_length],treeplot[:angle_between]) do l,ω
-        ser=serialize_tree(tree,l,ω)
+    serialized = lift(treeplot[:branch_length],treeplot[:angle_between], treeplot[:ports]) do l,ω,prts
+        ser=serialize_tree(tree,l,ω,prts)
         push!(ser.nodes, tree.id => Point2f0(0.0,0.0))
         ser
     end
     parent = DefaultDict(tree.id, serialized[].parents...)
     # get all the positions of the ports
     ports = lift(serialized,offset) do ser,off
-        foreach(p->p[2] += off, ser.ports)
+        [k=>v+off for (k,v) in ser.ports]
     end
 
     # plot branches
