@@ -61,7 +61,6 @@ function AbstractPlotting.default_theme(scene::AbstractPlotting.SceneLike, ::Typ
         branch_width=0.1,
         branch_length=1.0,
         angle_between=10/180*pi,
-        show_port_labels=true,
         xticks = [],
         root_position = Point2f0(0,0),
         port_marker = x -> (marker=isa(x,Port{:pos}) ? "▲" : "o", color=RGB(0.9,0.9,0.9)),
@@ -97,7 +96,7 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symb
         all_points = Vector{Pair{ID,Point2f0}}[]
         all_ports = Vector{Pair{ID,Point2f0}}[]
         all_points_flat = Pair{ID,Point2f0}[]
-        all_ports_flat = Pair{Port,Point2f0}[]
+        all_ports_flat = Pair{ID,Point2f0}[]
         all_parents_flat = Pair{ID,ID}[]
 
         # go through all branches once to collect information
@@ -136,8 +135,8 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron,Dict{Symb
             push!(all_points_flat, branch.id=>branch_end)
     
             # add ports for branch
-            num_branch_ports = length(get(given_ports, branch.id, []))
-            append!(all_ports_flat, Pair.(branch_ports, LinRange(Point2f0(0,0), branch_end, num_branch_ports+2)[2:end-1]))
+            branch_ports = get(given_ports, branch.id, ID[])
+            append!(all_ports_flat, Pair.(branch_ports, LinRange(Point2f0(0,0), branch_end, length(branch_ports)+2)[2:end-1]))
     
             # keep branches from branches' subtree
             if !isempty(points)            
