@@ -1,178 +1,46 @@
 import YAML
 using DataStructures: OrderedDict
 
-export generateRFSpikes, generateSpikeVolleys, plot_spike_raster, sample_inhomogeneous_poisson, generateEventsFromSpikes, load_network, save_network
+export P_superthreshold, P_fire, load_network, save_network
 
+
+"""P_superthreshold(threshold, event_probabilities, event_weights)
+
+Compute the probability with which a sum of events with given `event_weights` and `event_probabilities` 
+would exceed a given `threshold`.
 """
-    generateRFSpikes(trange, input, rfs, λ; group_size=ones(Int,length(rfs)), dt=1e-3, background_rate=0.0)
-
-Generates outputs resembling the activity of multiple homogeneous neuron populations.
-Emits volleys of spikes at a constant rate `λ` and encodes the receptive field responses
-rfs[i](input(t)) to the input at those times in the magnitudes of the volleys.
-"""
-function generateRFSpikes(trange, input, rfs, λ; group_size=ones(Int,length(rfs)), dt=0.0, background_rate=0.0)
-    T = (trange[end]-trange[1])
-
-    spikes = Vector{Vector{Vector{Float64}}}(undef, length(rfs))
-    for (i,rf) ∈ enumerate(rfs)
-        N = rand(Poisson(λ*T))
-        
-        master_spikes = rand(N) .* T .+ trange[1]
-        
-        p_accept = rf.(input.(master_spikes))
-        
-        spikes[i] = Vector{Vector{Float64}}(undef, group_size[i])
-        for j ∈ 1:group_size[i]
-            background_spikes = rand(rand(Poisson(background_rate*T))) .* T .+ trange[1]
-            spikes[i][j] = sort!([master_spikes[rand(length(master_spikes)) .≤ p_accept] ; background_spikes])
-            dels = Int[]
-            for (k,t) ∈ enumerate(spikes[i][j][2:end])
-                if t ≤ spikes[i][j][k] + dt
-                    push!(dels, k+1)
-                end
-            end
-            deleteat!(spikes[i][j], dels)
+function P_superthreshold(threshold, event_probabilities, event_weights)
+    @assert length(event_probabilities) == length(event_weights)
+    if isempty(event_probabilities)
+        return threshold ≤ 0 ? 1.0 : 0.0
+    end
+    
+    d = zeros(Bool, length(event_weights))
+    P = zero(Float64)
+    for i in 1:2^length(event_weights)
+        digits!(d, i, base=2)
+        if event_weights'*d ≥ threshold
+            p = prod(ifelse.(d, event_probabilities, one(Float64) .- event_probabilities))
+            P += p 
         end
     end
-
-    return spikes
+    P
 end
 
+"""P_fire(obj, volleys)
+
+Compute the probability with which the `volleys` (provided they occur in the correct temporal sequence) 
+would trigger a spike/plateau in `obj`
 """
-function sample_inhomogeneous_poisson(rate, trange; kwargs...)
-    spiketimes = Float64[]
-    rate_wrapped(u,p,t) = rate(t)
-    effect!(integrator) = push!(integrator.p, integrator.t)
-
-    prob = ODEProblem((du,u,p,t)->du.=0, Float64[],trange, spiketimes)
-    jump = VariableRateJump(rate_wrapped, effect!)
-    jump_prob=JumpProblem(prob, Direct(),jump)
-    solve(jump_prob,Tsit5(); kwargs...)
-
-    return spiketimes
-end
-"""
-
-function generateSpikeVolleys(trange, population_sizes, λs, volley_sizes, background_rate=0; dt_spike=0.0, dt_volley=0, kwargs...)
-    T = trange[2]-trange[1]
-    spikes = [[rand(rand(Poisson(background_rate*T))).*T.+trange[1] for i ∈ 1:num_neurons] for num_neurons ∈ population_sizes]
-    volleys = [NamedTuple{(:time,:idxs),Tuple{Float64,Vector{Int}}}[] for num_neurons ∈ population_sizes]
-    for (i,(λ,v,N)) ∈ enumerate(zip(λs, volley_sizes,population_sizes))
-
-        smp=if isa(λ,Real) 
-            rand(rand(Poisson(λ*T))).*T.+trange[1]
-        else
-            sample_inhomogeneous_poisson(λ, trange; kwargs...)
-        end
-
-        sort!(smp)
-        dels = Int[]
-        for (k,t) ∈ enumerate(smp[2:end])
-            if t ≤ smp[k] + dt_volley
-                push!(dels, k+1)
-            end
-        end
-        deleteat!(smp, dels)
-
-        for st ∈ smp
-            volley_size = if isa(v,Integer)
-                v
-            elseif isa(v,Real)
-                rand(Binomial(N, v))
-            else
-                vv = v(st)
-                if isa(vv,Integer)
-                    vv
-                else
-                    rand(Binomial(N, vv))
-                end
-            end
-            
-            idxs = sample(1:N, volley_size; replace=false)
-            for idx ∈ idxs
-                push!(spikes[i][idx], st)
-            end
-
-            push!(volleys[i], (time=st, idxs=idxs))
-        end
-        
-        foreach(sort!, spikes[i])
-        for j ∈ 1:N
-            sort!(spikes[i][j])
-            dels = Int[]
-            for (k,t) ∈ enumerate(spikes[i][j][2:end])
-                if t ≤ spikes[i][j][k] + dt_spike
-                    push!(dels, k+1)
-                end
-            end
-            deleteat!(spikes[i][j], dels)
-        end
+function P_fire(obj, volleys)
+    (probabilities, weights) = get(volleys, obj.id, ([],[]))
+    P_syn = P_superthreshold(obj.θ_syn, probabilities, weights)
+    return if isempty(obj.next_upstream) 
+        P_syn
+    else
+        P_seg = P_superthreshold(obj.θ_seg, P_fire.(obj.next_upstream, Ref(volleys)), ones(length(obj.next_upstream)))
+        P_syn*P_seg
     end
-    return spikes, volleys
-end
-
-
-"""
-    plot_spike_raster(trange, spikes, spike_width; p=plot(), colors=1:sum(length.(spikes)), kwargs...)
-
-Plots spiketrains belonging to several different groups given by `spikes::Vector{Vector{Vector{Float64}}}` with the given `spike_width` over a time interval `trange`.
-Each group is colorcoded by the corresponding element of `colors`.
-"""
-function plot_spike_raster(trange, spikes, spike_width; p=plot(), colors=1:length(spikes), highlight=[NamedTuple{(:time,:idxs),Tuple{Float64,Vector{Int}}}[] for i ∈ eachindex(spikes)], highlight_color=:red, ε=1e-3, kwargs...)
-    plot!(p)
-    k=0
-    for (i,group) ∈ enumerate(spikes)
-        
-        # Set spike colors for each spike in each train of this group
-        spike_colors = [convert(Vector{Any},fill(colors[i], length(spiketrain))) for spiketrain ∈ group]
-        for (k,volley) ∈ enumerate(highlight[i])
-            c = if isa(highlight_color, AbstractArray)
-                highlight_color[i]
-            else
-                highlight_color
-            end
-            
-            for j ∈ volley.idxs
-                cc = if isa(c, AbstractArray)
-                    c[j]
-                else
-                    c
-                end
-                
-                # overwrite spike color if highlighted
-                for s ∈ searchsortedfirst(group[j], volley.time-ε/2):searchsortedlast(group[j], volley.time+ε/2)
-                    spike_colors[j][s] = c
-                end
-            end
-        end
-
-        # plot the actual spikes
-        for (j,synapse) ∈ enumerate(group)
-            plot!([Shape([t,t+spike_width,t+spike_width,t],[k-0.45, k-0.45, k+0.45, k+0.45]) for t ∈ synapse], color=spike_colors[j], linecolor=nothing)
-            k-=1
-        end
-    end
-    plot!(; legend=false, grid=false, yticks=false, xlim=trange, ylim=(k+1-0.5,0.5), kwargs...)
-    return p
-end
-
-"""
-    generateEventsFromSpikes(s, population_names; spike_duration=0.001)
-
-Generates `Event` objects from groups of spiketrains given by `s::Vector{Vector{Vector{Float64}}}`.
-Each event is named by `Symbol("\$(name)\$(sid)")`, where the `name`s are given by `population_names` and `sid` enumerates the spiketrains belonging to one group.
-"""
-function generateEventsFromSpikes(s, population_names; spike_duration=0.001)
-    events = [
-        Event{Float64,ev_type,Symbol}(ev_time, Symbol("$(groupname)$(sid)"))
-        for (groupname,group) ∈ zip(population_names,s)
-        for (sid,synapse) ∈ enumerate(group)
-        for spike ∈ synapse
-        for (ev_type,ev_time) ∈ ((:spike_start,spike),(:spike_end,spike+spike_duration))
-    ]
-
-    sort!(events)
-    return events
 end
 
 """
