@@ -29,14 +29,14 @@ input=sort!([
 ])
 
 logger=simulate!(net, input, 1000)
-n    = filter(x->(x.object==:n_storage), logger.data)
+n    = get_trace(:n_storage, logger.data)
 n_storage_spikes = filter(x->(x.object==:n_storage && x.event == :spikes), logger.data)
-syn1   = filter(x->(x.object==:syn1), logger.data)
-syn2   = filter(x->(x.object==:syn2), logger.data)
+syn1   = get_trace(:syn1, logger.data)
+syn2   = get_trace(:syn2, logger.data)
 
-steps!(ax1, [0;syn1.t;1000], 1 .+ 0.45 .* [0;Int.(syn1.state);0] , fill=RGBAf0(1,0,0,0.5))
-steps!(ax1, [0;syn2.t;1000], 2 .+ 0.45 .* [0;Int.(syn2.state);0] , fill=RGBAf0(0,0,1,0.5))
-# steps!(ax1, [0;n.t;1000], 0.45 .* [0;Int.(n.state);0] , fill=RGBAf0(0,1,0,0.5))
+steps!(ax1, [0;syn1.t;1000], 1 .+ 0.45 .* [0;Int.(syn1.state);0] , fill=color_1_50)
+steps!(ax1, [0;syn2.t;1000], 2 .+ 0.45 .* [0;Int.(syn2.state);0] , fill=color_2_50)
+# steps!(ax1, [0;n.t;1000], 0.45 .* [0;Int.(n.state);0] , fill=color_3_50)
 linesegments!(ax1, repeat(n_storage_spikes.t,inner=2), repeat([0,0.9], outer=length(n_storage_spikes.t)))
 
 ################################################################################
@@ -71,19 +71,19 @@ input=sort!([
 
 logger=simulate!(net, input)
 
-n_storage   = filter(x->(x.object==:n_storage), logger.data)
+n_storage   = get_trace(:n_storage, logger.data)
 n_storage_spikes = filter(x->(x.object==:n_storage && x.event == :spikes), logger.data)
-n_readout   = filter(x->(x.object==:n_readout), logger.data)
-syn1   = filter(x->(x.object==:syn1), logger.data)
-syn2   = filter(x->(x.object==:syn2), logger.data)
-syn5   = filter(x->(x.object==:syn5), logger.data)
+n_readout   = get_trace(:n_readout, logger.data)
+syn1   = get_trace(:syn1, logger.data)
+syn2   = get_trace(:syn2, logger.data)
+syn5   = get_trace(:syn5, logger.data)
 
 
-steps!(ax2, [0;syn1.t;1000], 3 .+ 0.45 .* [0;Int.(syn1.state);0] , fill=RGBAf0(1,0,0,0.5))
-steps!(ax2, [0;syn2.t;1000], 4 .+ 0.45 .* [0;Int.(syn2.state);0] , fill=RGBAf0(0,0,1,0.5))
+steps!(ax2, [0;syn1.t;1000], 3 .+ 0.45 .* [0;Int.(syn1.state);0] , fill=color_1_50)
+steps!(ax2, [0;syn2.t;1000], 4 .+ 0.45 .* [0;Int.(syn2.state);0] , fill=color_2_50)
 steps!(ax2, [0;syn5.t;1000], 1 .+ 0.45 .* [0;Int.(syn5.state);0] , fill=RGBAf0(1,0,1,0.5))
 linesegments!(ax2, repeat(n_storage_spikes.t,inner=2), repeat([2,2.9], outer=length(n_storage_spikes.t)))
-#steps!(ax2, [0;n_storage.t;1000], 2 .+ 0.45 .* [0;Int.(n_storage.state);0] )#, fill=RGBAf0(0,1,0,0.5))
+#steps!(ax2, [0;n_storage.t;1000], 2 .+ 0.45 .* [0;Int.(n_storage.state);0] )#, fill=color_3_50)
 steps!(ax2, [0;n_readout.t;1000], 0.45 .* [0;Int.(n_readout.state);0] , fill=RGBAf0(0,1,1,0.5))
 
 ################################################################################

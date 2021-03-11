@@ -188,22 +188,13 @@ inputs(objects)=[Event(:input_spikes, 0.0, t, objects[id]) for (t,id) in all_spi
 
 scenarios = [config_soma, config_soma_segment, config_soma_segment_r, config_soma_parallel_segments, config_soma_serial_segments]
 
-function get_trace(id, data)
-    trace = filter(x->(x.object==id), data)
-    return if isempty(trace)
-        (t=eltype(data.t)[], state=eltype(data.state)[])
-    else
-        (t,v) = collect(zip(unique(zip(trace.t,trace.state))...))
-        (t=[t...], state=[v...])
-    end
-end
 
 tmax = 1000
 old_ax = nothing
 fig = Figure(resolution = (800, 600), show_axis=false)
 for (i,scenario) in enumerate(scenarios)
     ax = fig[i, 1] = Axis(fig)
-    ax_schema = fig[i, 2] = Axis(fig, width=Fixed(100), aspect=DataAspect())
+    ax_schema = fig[i, 2] = Axis(fig, width=Fixed(100), aspect=DataAspect(), backgroundcolor=:transparent, )
     local (net,objects) = load_network(YAML_source=scenario)
     local logger=simulate!(net, inputs(objects), tmax)
 
@@ -234,7 +225,7 @@ for (i,scenario) in enumerate(scenarios)
         repeat(spike_times, inner=2), 
         -repeat([0.0,11.0], outer=length(spike_times)), 
         linewidth=2,
-        color=RGBAf0(0,0,0,0.5)
+        color=:gray50
     )
 
     
@@ -257,15 +248,15 @@ for (i,scenario) in enumerate(scenarios)
     end
 
     if i==1
-        plot!(ax_schema, objects[:n], Dict{Symbol,Vector{Port}}(), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>:gray))
+        plot!(ax_schema, objects[:n], angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>:gray))
     elseif i==2
-        plot!(ax_schema, objects[:n], Dict{Symbol,Vector{Port}}(), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_2, :seg=>color_1))
+        plot!(ax_schema, objects[:n], angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_2, :seg=>color_1))
     elseif i==3
-        plot!(ax_schema, objects[:n], Dict{Symbol,Vector{Port}}(), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_1, :seg=>color_2))
+        plot!(ax_schema, objects[:n], angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_1, :seg=>color_2))
     elseif i==4
-        plot!(ax_schema, objects[:n], Dict{Symbol,Vector{Port}}(), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>:gray, :seg1=>color_2, :seg2=>color_1))
+        plot!(ax_schema, objects[:n], angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>:gray, :seg1=>color_2, :seg2=>color_1))
     elseif i==5
-        plot!(ax_schema, objects[:n], Dict{Symbol,Vector{Port}}(), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_1, :seg1=>color_1, :seg2=>color_2))
+        plot!(ax_schema, objects[:n], angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_1, :seg1=>color_1, :seg2=>color_2))
     end
 
     ax.yticks = [-8.5, -3.5]

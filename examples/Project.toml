@@ -1,4 +1,4 @@
 [deps]
 ADSP = "2cfc0b36-c815-11e8-3a47-49b3c0410e59"
+AbstractPlotting = "537997a7-5e4e-5d89-9595-2241ea00577e"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"

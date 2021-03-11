@@ -3,9 +3,31 @@ import ColorTypes: RGB
 import DataStructures: DefaultDict
 
 pal = AbstractPlotting.Palette(:Dark2)
-set_theme!(Theme(
-    color = pal
-))
+
+mytheme = Theme(
+    fontsize = 16,
+    font = "Linux Libertine O",
+    Axis = (
+        backgroundcolor = :gray90,
+        leftspinevisible = false,
+        rightspinevisible = false,
+        bottomspinevisible = false,
+        topspinevisible = false,
+        xgridcolor = :white,
+        ygridcolor = :white,
+        titlesize = 18,
+        xticklabelsize = 14,
+        yticklabelsize = 14,
+        xlabelpadding = 5f0,
+        ylabelpadding = 5f0,
+        xticklabelcolor = :gray10,
+        yticklabelcolor = :gray10,
+        xtickcolor = :gray10,
+        ytickcolor = :gray10,
+    )
+)
+
+set_theme!(mytheme)
 
 color_1 = pal.colors[1]
 color_1_50 = RGBAf0(color_1.r,color_1.g,color_1.b,0.5)

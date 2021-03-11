@@ -1,8 +1,22 @@
 import YAML
 using DataStructures: OrderedDict
 
-export P_superthreshold, P_fire, load_network, save_network
+export P_superthreshold, P_fire, load_network, save_network, get_trace
 
+"""get_trace(id, data)
+
+Utility function to extract and simplify a state trace from the logger.
+This removes redundant events that occur at the same time as others without altering the state.
+"""
+function get_trace(id, data)
+    trace = filter(x->(x.object==id), data)
+    return if isempty(trace)
+        (t=eltype(data.t)[], state=eltype(data.state)[])
+    else
+        (t,v) = collect(zip(unique(zip(trace.t,trace.state))...))
+        (t=[t...], state=[v...])
+    end
+end
 
 """P_superthreshold(threshold, event_probabilities, event_weights)
 

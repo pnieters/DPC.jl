@@ -50,6 +50,8 @@ inp=[
 ]
 
 logger=simulate!(net, inp, 150.0)
+spikes = filter(x->(x.object==:n && x.event==:spikes), logger.data)
+plateau_starts = filter(x->(x.object==:seg && x.event==:plateau_starts), logger.data)
 
 
 fig = Figure(resolution = (800, 400), show_axis=false)
@@ -58,18 +60,16 @@ ax1 = fig[1, 1] = Axis(fig, title = "Neural spatio-temporal response", height=Fi
 seg = filter(x->(x.object==:seg && x.event==:backprop), logger.data)
 steps!(ax1, [0;seg.t;150.0], 2.49*[0;Int.(seg.state);0] .- 5.05, color=:transparent, fill=color_1_25)
 for (i,syn) in enumerate([:syn1, :syn2, :syn3, :syn4, :syn5])
-    epsp = filter(x->(x.object==syn), logger.data)
+    epsp = get_trace(syn), logger.data)
     steps!(ax1, [0;epsp.t;150.0], -i .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color_1_50)
 end
-spikes = filter(x->(x.object==:n && x.event==:spikes), logger.data)
 lines!(spikes.t, [-10.1, -5.1], linewidth=3, color=color_1)
 
 for (i,syn) in enumerate([:syn6, :syn7, :syn8, :syn9, :syn10])
-    epsp = filter(x->(x.object==syn), logger.data)
+    epsp = get_trace(syn), logger.data)
     steps!(ax1, [0;epsp.t;150.0], -5.005 + -i .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color_2_50)
 end
 
-plateau_starts = filter(x->(x.object==:seg && x.event==:plateau_starts), logger.data)
 # lines!(spikes.t, [-10.1, -5.1], linewidth=5, color=:black)
 # lines!(plateau_starts.t, [-5.1, -0.1], linewidth=5, color=:black)
 lines!(ax1, Rect(16, -5.25, 11, 5.5), color=:darkgray, linewidth=2)
@@ -127,9 +127,9 @@ A_nodes_2 = collect(zip([7,7,7,7,7], A_y))
 B_nodes_1 = collect(zip([4,4,4,4,4], B_y))
 B_nodes_2 = collect(zip([7,7,7,7,7], B_y))
 
-ax4 = fig[2,1][1,3] = Axis(fig, title="Morphology", limits=Rect(-5,5,14,14), height=Fixed(150), aspect = DataAspect())
+ax4 = fig[2,1][1,3] = Axis(fig, title="Morphology", height=Fixed(150), aspect = DataAspect(), backgroundcolor=:transparent)
 lines!(ax4, Rect(-5,-5,10,10), color=:black)
-plot!(ax4, objects[:n], Dict{Symbol,Vector{Port}}(), branch_width=0.75, branch_length=5.0, root_position=Point2f0(7.0, -2.0), color=Dict(:seg=>color_1,:n=>color_2))
+plot!(ax4, objects[:n], branch_width=0.75, branch_length=5.0, root_position=Point2f0(7.0, -2.0), color=Dict(:seg=>color_1,:n=>color_2))
 hidedecorations!(ax4)
 hidespines!(ax4)
 
@@ -146,7 +146,8 @@ scatter!(ax4, x, y, marker=:x)
 
 hidedecorations!(ax4)
 hidespines!(ax4)
-
+xlims!(ax4, (-5,9))
+ylims!(ax4, (-5,5))
 
 # fig
 save("spatio_temporal_rf.svg", fig)
