@@ -2,6 +2,7 @@ using ADSP
 using AbstractPlotting
 import ColorTypes: RGB
 import DataStructures: DefaultDict
+CairoMakie.activate!()
 
 pal = AbstractPlotting.Palette(:Dark2)
 
@@ -80,13 +81,14 @@ Port{W}(name::I) where {W,I} = Port{W,I}(name)
 
 function AbstractPlotting.default_theme(scene::AbstractPlotting.SceneLike, ::Type{<: AbstractPlotting.Plot(Neuron)})
     Theme(
-        color=RGB(0.9,0.9,0.9),
+        color=RGBAf0(0.9,0.9,0.9,1.0),
         branch_width=0.1,
         branch_length=1.0,
         angle_between=10/180*pi,
         xticks = [],
         root_position = Point2f0(0,0),
-        ports = Dict{Symbol,Vector{Symbol}}()
+        ports = Dict{Symbol,Vector{Symbol}}(),
+        fxaa = false,
     )
 end
 
@@ -145,10 +147,11 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron))
         branch_angles = cumsum(sectors) .- sectors./2 .- sector/2
 
         for (branch, branch_angle, points, ports) in zip(tree.next_upstream, branch_angles, all_points, all_ports)
-            # shift by l and rotate by `branch_angle`
+            # shift by ll and rotate by `branch_angle`
+            ll = maybe_get(l, branch.id)
             c=cos(branch_angle)
             s=sin(branch_angle)
-            transform = ((x,y),) -> Point2f0(c*x-s*(y+l),s*x+c*(y+l))
+            transform = ((x,y),) -> Point2f0(c*x-s*(y+ll),s*x+c*(y+ll))
     
             branch_end = transform(Point2f0(0.0,0.0))
             # add branch for branch
@@ -214,7 +217,7 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron))
         poly!(treeplot, lift(w1,serialized, offset) do w1,ser,off
             node_dict = Dict(ser.nodes...)
             b2 = node_dict[name]
-            Circle(off + b2, w1/2)
+            decompose(Point2f0, Circle(off + b2, w1/2))
         end, color=c, strokewidth = 1, strokecolor=c)
     end
 
@@ -231,15 +234,28 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron))
 end
 
 
-# """
-# Computes diameters for branches to satisfy Rall's condition.
-# """
-# function get_branch_diameters(tree::Branch{I}; own_diam=1.0, diams=Dict{I,Float64}()) where {I}
-#     diams[tree.name] = own_diam
-#     child_diam = (own_diam^(3/2)/length(tree.branches))^(2/3)
-#     for child in tree.branches
-#         get_branch_diameters(child; own_diam=child_diam, diams=diams)
-#     end
-#     return diams
-# end
+"""
+Computes diameters for branches to satisfy Rall's condition.
+"""
+function get_branch_diameters(tree::NeuronOrSegment{ID,T,WT,IT}; root_diam=1.0, diams=Dict{ID,Float64}()) where {ID,T,WT,IT}
+    diams[tree.id] = root_diam
+    child_diam = (root_diam^(3/2)/length(tree.next_upstream))^(2/3)
+    for child in tree.next_upstream
+        get_branch_diameters(child; root_diam=child_diam, diams=diams)
+    end
+    return diams
+end
+
+
+
+"""
+Computes the depths in segments from the soma for each segment.
+"""
+function get_root_distances(tree::NeuronOrSegment{ID,T,WT,IT}; start=0, dists = Dict{ID,Int}()) where {ID,T,WT,IT}
+    dists[tree.id] = start
+    for child in tree.next_upstream
+        get_root_distances(child; start=start+1, dists=dists)
+    end
+    return dists
+end
 

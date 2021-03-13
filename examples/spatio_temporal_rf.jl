@@ -255,13 +255,13 @@ yy = repeat(-2:1:2, inner=5)
 ax2 = fig[2, 1][1,1] = Axis(fig, title="Early RF", limits=Rect(-5,5,10,10), aspect = DataAspect(), height=Fixed(150))
 heatmap!(ax2, x, y, A_rf.(x', y), colormap=:diverging_bwr_40_95_c42_n256, interpolate=true, colorrange=(-A_rf(0,0),A_rf(0,0)))
 scatter!(ax2, xx, yy, marker=:x, color=:gray)
-lines!.(ax2, Circle.(A_centers,σ), linewidth=2, color=:black)
+lines!.(ax2, decompose.(Point2f0, Circle.(A_centers,σ)), linewidth=2, color=:black)
 hidedecorations!(ax2)
 
 ax3 = fig[2, 1][1,2] = Axis(fig, title="Late RF", limits=Rect(-5,5,10,10), aspect = DataAspect(), height=Fixed(150))
 heatmap!(ax3, x, y, B_rf.(x', y), colormap=:diverging_bwr_40_95_c42_n256, interpolate=true, colorrange=(-B_rf(0,0),B_rf(0,0)))
 scatter!(ax3, xx, yy, marker=:x, color=:gray)
-lines!.(ax3, Circle.(B_centers,σ), linewidth=2, color=:black)
+lines!.(ax3, decompose.(Point2f0, Circle.(B_centers,σ)), linewidth=2, color=:black)
 hidedecorations!(ax3)
 
 
@@ -278,8 +278,8 @@ plot!(ax4, objects_2[:n], branch_width=0.75, branch_length=5.0, root_position=Po
 hidedecorations!(ax4)
 hidespines!(ax4)
 
-poly!.(ax4, Circle.(A_centers,σ), linestyle=:dash, linewidth=2, color=color_1_50)
-poly!.(ax4, Circle.(B_centers,σ), linestyle=:dot, linewidth=2, color=color_2_50)
+poly!.(ax4, decompose.(Point2f0, Circle.(A_centers,σ)), linestyle=:dash, linewidth=2, color=color_1_50)
+poly!.(ax4, decompose.(Point2f0, Circle.(B_centers,σ)), linestyle=:dot, linewidth=2, color=color_2_50)
 for i in 1:5
   lines!(ax4, Point2f0[A_centers[i], A_nodes_1[i], A_nodes_2[i]], linewidth=2, color=color_1)
   lines!(ax4, Point2f0[B_centers[i], B_nodes_1[i], B_nodes_2[i]], linewidth=2, color=color_2)
