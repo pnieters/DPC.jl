@@ -187,4 +187,7 @@ steps!(ax4, [0;syn2.t;450], 2 .+ 0.9 .* [0;Int.(syn2.state);0], fill=color_2)
 steps!(ax4, [0;seg2.t;450], 2 .+ 0.45 .* [0;Int.(seg2.state);0], fill=color_2_50)
 steps!(ax4, [0;n.t;450], 0.45 .* [0;Int.(n.state);0] , fill=color_3_50)
 
-save("coincidence.svg", fig)
+save(joinpath("figures","coincidence.pdf"), fig)
+save(joinpath("figures","coincidence.svg"), fig)
+save(joinpath("figures","coincidence.png"), fig)
+fig

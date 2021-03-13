@@ -57,7 +57,7 @@ println("Computing for OR neuron")
 (net2,objects2) = load_network(YAML_source=config2)
 firing_probabilities2 = [(prob_A .= a; prob_B .= b; P_fire(objects2[:C], volleys)) for a ∈ probabilities, b ∈ probabilities]
 
-begin
+
 fig = Figure(resolution=(600,600))
 ax0 = fig[1,2:3] = Axis(fig, title="Single segment", xlabel="Synaptic transmission probability P₀", ylabel="Plateau probability")#, aspect=DataAspect()
 cell_col_1 = fig[1,4]
@@ -71,7 +71,7 @@ colors = cgrad(:viridis,length(firing_probabilities0), categorical=true)
 for (prob,col) in zip(firing_probabilities0, colors)
     lines!(ax0, probabilities, prob, color=col, linewidth=3)
 end
-ax_col_1 = Colorbar(cell_col_1, width=10, colormap=colors, limits=(0.5,10.5), ticks=1:10, label="Threshold")
+ax_col_1 = Colorbar(cell_col_1, width=10, colormap=colors, limits=(0.5,10.5), ticks=1:10, label="Threshold (out of $(num_synapses) synapses)")
 
 contourf!(ax1, probabilities, probabilities, firing_probabilities1, colormap=:viridis, colorrange=(0,1))
 
@@ -118,6 +118,7 @@ ax1.yticks[] = [0,0.5,1.0]
 
 
 
-display(fig)
-save("probabilistic.svg", fig)
-end
+save(joinpath("figures","probabilistic.pdf"), fig)
+save(joinpath("figures","probabilistic.svg"), fig)
+save(joinpath("figures","probabilistic.png"), fig)
+fig

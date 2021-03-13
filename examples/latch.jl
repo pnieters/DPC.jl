@@ -87,4 +87,7 @@ linesegments!(ax2, repeat(n_storage_spikes.t,inner=2), repeat([2,2.9], outer=len
 steps!(ax2, [0;n_readout.t;1000], 0.45 .* [0;Int.(n_readout.state);0] , fill=RGBAf0(0,1,1,0.5))
 
 ################################################################################
-save("latch.svg", fig)
+save(joinpath("figures","latch.pdf"), fig)
+save(joinpath("figures","latch.svg"), fig)
+save(joinpath("figures","latch.png"), fig)
+fig

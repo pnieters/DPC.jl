@@ -278,4 +278,7 @@ for (i,scenario) in enumerate(scenarios)
 end
 fig
 
-save("morphologies.svg", fig)
+save(joinpath("figures","morphologies.pdf"), fig)
+save(joinpath("figures","morphologies.svg"), fig)
+save(joinpath("figures","morphologies.png"), fig)
+fig

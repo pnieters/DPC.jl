@@ -195,4 +195,7 @@ steps!(ax2, [0;seg_read_5.t;1000],    4 .+ 0.45 .* [0;Int.(seg_read_5.state);0],
 steps!(ax2, [0;syn_read_5.t;1000],    4 .+ 0.9 .* [0;Int.(syn_read_5.state);0],   fill=color_1_50)
 linesegments!(ax2, repeat(n_readout_5_spikes.t,inner=2), repeat(4 .+ [0,0.9], outer=length(n_readout_5_spikes.t)), linewidth=3, color=:yellow)
 
-save("stochastic_latch.svg", fig)
+save(joinpath("figures","stochastic_latch.pdf"), fig)
+save(joinpath("figures","stochastic_latch.svg"), fig)
+save(joinpath("figures","stochastic_latch.png"), fig)
+fig
