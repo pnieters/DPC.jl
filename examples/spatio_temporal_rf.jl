@@ -116,19 +116,12 @@ B_joints = [(-2,-6.25-i*0.5) for i  in 1:5]
 A_ends = [(0,-1.25-i*0.5) for i  in 1:5]
 B_ends = [(0,-6.25-i*0.5) for i  in 1:5]
 
-function force_ticks(manual_ticks, manual_labels)
-  @assert length(manual_ticks) == length(manual_labels)
-  idx = sortperm(manual_ticks)
-  t = copy(manual_ticks)
-  l = copy(manual_labels)
-  t[idx], x->l[idx]
-end
 
 ################################################################################
 ## Neuron without active dendrite segment                                     ##
 ################################################################################
-xticks,xtickformat = force_ticks([0;50;100;150;spikes_1.t], ["0ms","50ms","100ms","150ms","t₀"])
-yticks,ytickformat = force_ticks(-9.5:-0.5, reverse!(["$(grp)$(sub)" for grp in ["A","B"] for sub in ['₁','₂','₃','₄','₅']]))
+xticks,xtickformat = make_manual_ticks([0;50;100;150;spikes_1.t], ["0ms","50ms","100ms","150ms","t₀"])
+yticks,ytickformat = make_manual_ticks(-9.5:-0.5, reverse!(["$(grp)$(sub)" for grp in ["A","B"] for sub in ['₁','₂','₃','₄','₅']]))
 
 # Draw response
 grd = fig[1, 1] = GridLayout()
@@ -136,15 +129,15 @@ ax_res_1 = grd[1,1] = Axis(fig, title = "Point-neuron", height=Fixed(120), xtick
 ax_morph_1 = grd[1,2] = Axis(fig, width=Fixed(100), aspect=DataAspect(), backgroundcolor=:transparent)
 
 seg = get_trace(:seg, logger_1.data)
-steps!(ax_res_1, [0;seg.t;150.0], 2.49*[0;Int.(seg.state);0] .- 5.05, color=:transparent, fill=color_1_25)
+steps!(ax_res_1, [0;seg.t;150.0], 2.49*[0;Int.(seg.state);0] .- 5.05, color=:transparent, fill=color_1_50)
 for (i,syn) in enumerate([:syn1, :syn2, :syn3, :syn4, :syn5])
     epsp = get_trace(syn, logger_1.data)
-    steps!(ax_res_1, [0;epsp.t;150.0], -i .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color_1_50)
+    steps!(ax_res_1, [0;epsp.t;150.0], -i .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color_1)
 end
 
 for (i,syn) in enumerate([:syn6, :syn7, :syn8, :syn9, :syn10])
   epsp = get_trace(syn, logger_1.data)
-  steps!(ax_res_1, [0;epsp.t;150.0], -5.005 + -i .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color_2_50)
+  steps!(ax_res_1, [0;epsp.t;150.0], -5.005 + -i .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color_2)
 end
 
 lines!(ax_res_1, Rect(16, -10.05, 11, 10.1), color=:darkgray, linewidth=2)
@@ -178,20 +171,20 @@ colgap!(grd, 1, 0)
 ################################################################################
 ## Neuron with active dendrite segment                                        ##
 ################################################################################
-xticks,xtickformat = force_ticks([0;50;100;150;plateau_starts.t;spikes_2.t;plateau_starts.t.+objects_2[:seg].plateau_duration],["0ms","50ms","100ms","150ms","t₀","t₁","t₀+τ"])
+xticks,xtickformat = make_manual_ticks([0;50;100;150;plateau_starts.t;spikes_2.t;plateau_starts.t.+objects_2[:seg].plateau_duration],["0ms","50ms","100ms","150ms","t₀","t₁","t₀+τ"])
 
 ax_res_2 = grd[2,1] = Axis(fig, title = "Neuron with active dendrite", height=Fixed(120), xticks=xticks, xtickformat=xtickformat, yticks=yticks, ytickformat=ytickformat)
 
 seg = get_trace(:seg, logger_2.data)
-steps!(ax_res_2, [0;seg.t;150.0], 2.49*[0;Int.(seg.state);0] .- 5.05, color=:transparent, fill=color_1_25)
+steps!(ax_res_2, [0;seg.t;150.0], 2.49*[0;Int.(seg.state);0] .- 5.05, color=:transparent, fill=color_1_50)
 for (i,syn) in enumerate([:syn1, :syn2, :syn3, :syn4, :syn5])
     epsp = get_trace(syn, logger_2.data)
-    steps!(ax_res_2, [0;epsp.t;150.0], -i .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color_1_50)
+    steps!(ax_res_2, [0;epsp.t;150.0], -i .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color_1)
 end
 
 for (i,syn) in enumerate([:syn6, :syn7, :syn8, :syn9, :syn10])
   epsp = get_trace(syn, logger_2.data)
-  steps!(ax_res_2, [0;epsp.t;150.0], -5.005 + -i .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color_2_50)
+  steps!(ax_res_2, [0;epsp.t;150.0], -5.005 + -i .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color_2)
 end
 
 lines!(ax_res_2, Rect(16, -5.25, 11, 5.5), color=:darkgray, linewidth=2)

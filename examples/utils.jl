@@ -1,8 +1,18 @@
 using ADSP
 using AbstractPlotting
 import ColorTypes: RGB
-import DataStructures: DefaultDict
+import DataStructures: DefaultDict, OrderedDict
 CairoMakie.activate!()
+
+
+function make_manual_ticks(manual_ticks, manual_labels)
+    @assert length(manual_ticks) == length(manual_labels)
+    idx = sortperm(manual_ticks)
+    t = copy(manual_ticks)
+    l = copy(manual_labels)
+    t[idx], x->l[idx]
+end
+
 
 pal = AbstractPlotting.Palette(:Dark2)
 
@@ -112,7 +122,7 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron))
     maybe_get(obj, key) = obj
 
     
-    function serialize_tree(tree::NeuronOrSegment{ID,T,WT,IT}, l, ω, given_ports) where {ID,T,WT,IT}
+    function serialize_tree(tree::NeuronOrSegment{ID,T,WT,IT}, l, w, ω, given_ports) where {ID,T,WT,IT}
         sectors = Float64[]
         depths = Float64[]
         all_points = Vector{Pair{ID,Point2f0}}[]
@@ -124,7 +134,7 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron))
         # go through all branches once to collect information
         for subtree in tree.next_upstream
             # get angle and depth of sector
-            α,d,points,ports,parents = serialize_tree(subtree, l, ω, given_ports)
+            α,d,points,ports,parents = serialize_tree(subtree, l, w, ω, given_ports)
             # compute depth of new sector
             ll = maybe_get(l, subtree.id)
             c = √(ll^2+d^2-2*ll*d*cos(π-α/2))
@@ -172,14 +182,19 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron))
             end
         end
 
+        if isa(tree, Neuron)
+            neuron_ports = get(given_ports, tree.id, ID[])
+            append!(all_ports_flat, Pair.(neuron_ports, LinRange(Point2f0(0,-w), Point2f0(0,w), length(neuron_ports)+2)[2:end-1]))
+        end
+
         return (sector=sector, depth=depth, nodes=all_points_flat, ports=all_ports_flat, parents=all_parents_flat)
     end
 
 
 
     # get all nodes, their ports and parents in flat format
-    serialized = lift(treeplot[:branch_length],treeplot[:angle_between], treeplot[:ports]) do l,ω,prts
-        ser=serialize_tree(tree,l,ω,prts)
+    serialized = lift(treeplot[:branch_length],treeplot[:branch_width],treeplot[:angle_between], treeplot[:ports]) do l,w,ω,prts
+        ser=serialize_tree(tree,l,w,ω,prts)
         push!(ser.nodes, tree.id => Point2f0(0.0,0.0))
         ser
     end
@@ -251,7 +266,7 @@ end
 """
 Computes the depths in segments from the soma for each segment.
 """
-function get_root_distances(tree::NeuronOrSegment{ID,T,WT,IT}; start=0, dists = Dict{ID,Int}()) where {ID,T,WT,IT}
+function get_root_distances(tree::NeuronOrSegment{ID,T,WT,IT}; start=0, dists = OrderedDict{ID,Int}()) where {ID,T,WT,IT}
     dists[tree.id] = start
     for child in tree.next_upstream
         get_root_distances(child; start=start+1, dists=dists)
@@ -259,3 +274,32 @@ function get_root_distances(tree::NeuronOrSegment{ID,T,WT,IT}; start=0, dists = 
     return dists
 end
 
+
+"""
+Draw a grid of pie-plots to illustrate a discrete spatial distribution of class probabilities.
+"""
+function plot_pie_grid(ax, xgrid, ygrid, class_counts...; 
+    class_colors=[RGBAf0(c,c,c) for c in LinRange(0,1,length(class_counts))], 
+    color=repeat(class_colors, 1, length(xgrid), length(ygrid)))
+
+    scale = min(minimum(diff(xgrid)),minimum(diff(ygrid)))/(2*√(maximum(sum(class_counts))))
+    cnt_tmps = zeros(Int,length(class_counts))
+    for (i,x) in  enumerate(xgrid), (j,y) in enumerate(ygrid)
+        for (k,class) in enumerate(class_counts)
+            cnt_tmps[k] = class[i,j]
+        end
+
+        frac_pos = cumsum(cnt_tmps) ./ sum(cnt_tmps)
+        Φs = 2π .* frac_pos
+        r = √(sum(cnt_tmps))*scale
+        if sum(cnt_tmps) > 0
+            Φ₀ = 0
+            for (k,Φ) in enumerate(Φs)
+                arc = Point2f0[[Point2f0(x,y)]; [Point2f0(x+r*sin(ϕ),y+r*cos(ϕ)) for ϕ in LinRange(Φ₀,Φ,round(Int,Φ*100))]; [Point2f0(x,y)]]
+                
+                poly!(ax, arc, color=color[k,i,j])
+                Φ₀ = Φ
+            end
+        end
+    end    
+end
