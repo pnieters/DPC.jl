@@ -412,6 +412,7 @@ for (level,name) in zip(0:4, ["first segment", "first segment", "second segment"
     hidespines!(ax_schema)
     ylims!(ax, -0.5,10.5)
     xlims!(ax, -0.5,10.5)
+    colsize!(figᵢ.layout, 1, Aspect(1, 1))
     display(figᵢ)
     save(joinpath("figures","classifier_walkthrough","fig$(level+4).png"), figᵢ)
 end
