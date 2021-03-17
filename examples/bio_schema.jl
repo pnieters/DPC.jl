@@ -66,4 +66,6 @@ xlims!(ax, [-2.5,3.5])
 ylims!(ax, [-0.5,5.5])
 
 save(joinpath("figures", "bio_schema.svg"), fig)
+save(joinpath("figures", "bio_schema.png"), fig)
+save(joinpath("figures", "bio_schema.pdf"), fig)
 fig

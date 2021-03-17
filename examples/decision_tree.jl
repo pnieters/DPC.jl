@@ -1,6 +1,8 @@
 using ADSP, CairoMakie, Random, Optim
 include("utils.jl")
 
+set_theme!(presentation_theme)
+
 ## Network configurations
 config_preamble = """
 refractory_duration: 100.5
@@ -304,45 +306,54 @@ end
 
 
 ## Figure 1: show raw data
-fig1 = Figure(resolution=(700,700))
+fig1 = Figure(resolution=(900,700))
 ax = fig1[1,1] = Axis(fig1, xticks=xgrid, yticks=ygrid, 
     title="Example: 2D classification - raw data", 
     xlabel="feature encoded by population X",
     ylabel="feature encoded by populytion Y")
+ax2 = fig1[1,2] = Axis(fig1, backgroundcolor=:transparent, width=150)
+hidedecorations!(ax2)
+hidespines!(ax2)
+
 scatter!(ax, pos_real, marker=:x, strokecolor=color_1)
 scatter!(ax, neg_real, marker=:x, strokecolor=color_2)
-
+    
 ylims!(ax, -0.5,10.5)
 xlims!(ax, -0.5,10.5)
+colsize!(fig1.layout, 1, Aspect(1, 1))
 save(joinpath("figures","classifier_walkthrough","fig1.png"), fig1)
 fig1
 
 ## Figure 2: show encoding
-fig2 = Figure(resolution=(700,700))
+fig2 = Figure(resolution=(900,700))
 ax = fig2[1,1] = Axis(fig2, xticks=xgrid, yticks=ygrid, 
     title="Example: encoding into a spike volley", 
     xlabel="#spikes from population X",
     ylabel="#spikes from population Y")
+ax2 = fig2[1,2] = Axis(fig2, backgroundcolor=:transparent, width=150)
+hidedecorations!(ax2)
+hidespines!(ax2)
 
 colors = select_colors(effective, 0)
 plot_pie_grid(ax,xgrid,ygrid, counts_pos, counts_neg, color=colors)
     
 ylims!(ax, -0.5,10.5)
 xlims!(ax, -0.5,10.5)
+colsize!(fig2.layout, 1, Aspect(1, 1))
 save(joinpath("figures","classifier_walkthrough","fig2.png"), fig2)
 fig2
 
 
 
 ## Figure 3:
-fig3 = Figure(resolution=(800,700))
+fig3 = Figure(resolution=(900,700))
 ax = fig3[1,1] = Axis(fig3, xticks=xgrid, yticks=ygrid, 
     title="Example: What a linear classifier can see & do", 
     xlabel="#spikes from population X",
     ylabel="#spikes from population Y")
 
 
-ax_schema = fig3[1,2] = Axis(fig3, width=100, aspect=DataAspect(), backgroundcolor=:transparent)
+ax_schema = fig3[1,2] = Axis(fig3, width=150, aspect=DataAspect(), backgroundcolor=:transparent)
 plt=plot!(ax_schema, objects_shallow[:n], branch_width=1.0, branch_length=5.0, 
     color=DefaultDict(to_color(:gray40), neuron_colors[end-level+1:end]...),
     ports=Dict(:n=>[:nX,:nY]))
@@ -363,6 +374,7 @@ hidedecorations!(ax_schema)
 hidespines!(ax_schema)
 ylims!(ax, -0.5,10.5)
 xlims!(ax, -0.5,10.5)
+colsize!(fig3.layout, 1, Aspect(1, 1))
 save(joinpath("figures","classifier_walkthrough","fig3.png"), fig3)
 fig3
 
@@ -372,13 +384,13 @@ dists = get_root_distances(objects[:n])
 neuron_colors = [k=>cols[2+v] for (k,v) in pairs(dists)]
 
 for (level,name) in zip(0:4, ["first segment", "first segment", "second segment", "third segment", "soma"])
-    figᵢ = Figure(resolution=(800,700))
+    figᵢ = Figure(resolution=(900,700))
     ax = figᵢ[1,1] = Axis(figᵢ, xticks=xgrid, yticks=ygrid, 
         title="Example: What the $(name) can see & do", 
         xlabel="#spikes from population X",
         ylabel="#spikes from population Y")
 
-    ax_schema = figᵢ[1,2] = Axis(figᵢ, width=100, aspect=DataAspect(), backgroundcolor=:transparent)
+    ax_schema = figᵢ[1,2] = Axis(figᵢ, width=150, aspect=DataAspect(), backgroundcolor=:transparent)
     plt=plot!(ax_schema, objects[:n], branch_width=1.0, branch_length=5.0, 
         color=DefaultDict(to_color(:gray40), neuron_colors[end-level+1:end]...),
         ports=Dict(:n=>[:nX,:nY],:seg1=>[:seg1X,:seg1Y],:seg2=>[:seg2X,:seg2Y],:seg3=>[:seg3X,:seg3Y]))
@@ -403,3 +415,5 @@ for (level,name) in zip(0:4, ["first segment", "first segment", "second segment"
     display(figᵢ)
     save(joinpath("figures","classifier_walkthrough","fig$(level+4).png"), figᵢ)
 end
+
+set_theme!(mytheme)

@@ -30,6 +30,8 @@ mytheme = Theme(
         titlesize = 18,
         xticklabelsize = 14,
         yticklabelsize = 14,
+        xlabelsize = 16,
+        ylabelsize = 16,
         xlabelpadding = 5f0,
         ylabelpadding = 5f0,
         xticklabelcolor = :gray10,
@@ -41,6 +43,15 @@ mytheme = Theme(
 
 set_theme!(mytheme)
 
+presentation_theme = copy(mytheme)
+presentation_theme[:Axis][:titlesize][] = 28
+presentation_theme[:Axis][:xticklabelsize][] = 24
+presentation_theme[:Axis][:yticklabelsize][] = 24
+presentation_theme[:Axis][:xlabelsize][] = 26
+presentation_theme[:Axis][:ylabelsize][] = 26
+presentation_theme[:fontsize][] = 26
+
+
 color_1 = pal.colors[1]
 color_1_50 = RGBAf0(color_1.r,color_1.g,color_1.b,0.5)
 color_1_25 = RGBAf0(color_1.r,color_1.g,color_1.b,0.25)
@@ -50,6 +61,9 @@ color_2_25 = RGBAf0(color_2.r,color_2.g,color_2.b,0.25)
 color_3 = pal.colors[3]
 color_3_50 = RGBAf0(color_3.r,color_3.g,color_3.b,0.5)
 color_3_25 = RGBAf0(color_3.r,color_3.g,color_3.b,0.25)
+color_4 = pal.colors[4]
+color_4_50 = RGBAf0(color_3.r,color_3.g,color_3.b,0.5)
+color_4_25 = RGBAf0(color_3.r,color_3.g,color_3.b,0.25)
 
 @recipe(Steps, t, y) do scene
     Theme(
@@ -184,7 +198,9 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron))
 
         if isa(tree, Neuron)
             neuron_ports = get(given_ports, tree.id, ID[])
-            append!(all_ports_flat, Pair.(neuron_ports, LinRange(Point2f0(0,-w), Point2f0(0,w), length(neuron_ports)+2)[2:end-1]))
+
+            ww = maybe_get(w, tree.id)
+            append!(all_ports_flat, Pair.(neuron_ports, LinRange(Point2f0(0,-ww), Point2f0(0,ww), length(neuron_ports)+2)[2:end-1]))
         end
 
         return (sector=sector, depth=depth, nodes=all_points_flat, ports=all_ports_flat, parents=all_parents_flat)

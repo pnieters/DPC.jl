@@ -1,5 +1,6 @@
 using ADSP, CairoMakie
 include("utils.jl")
+set_theme!(presentation_theme)
 
 config0 = """
 neurons:
@@ -57,8 +58,9 @@ println("Computing for OR neuron")
 (net2,objects2) = load_network(YAML_source=config2)
 firing_probabilities2 = [(prob_A .= a; prob_B .= b; P_fire(objects2[:C], volleys)) for a ∈ probabilities, b ∈ probabilities]
 
+## Plotting
 
-fig = Figure(resolution=(600,600))
+fig = Figure(resolution=(900,800))
 ax0 = fig[1,2:3] = Axis(fig, title="Single segment", xlabel="Synaptic transmission probability P₀", ylabel="Plateau probability")#, aspect=DataAspect()
 cell_col_1 = fig[1,4]
 ax0b = fig[1,1] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
@@ -77,7 +79,7 @@ contourf!(ax1, probabilities, probabilities, firing_probabilities1, colormap=:vi
 
 contourf!(ax2, probabilities, probabilities, firing_probabilities2, colormap=:viridis, colorrange=(0,1))
 
-p_n=plot!(ax3, objects1[:C], ports=Dict(:C=>[:C],:A=>[:A],:B=>[:B]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>:gray, :A=>color_1, :B=>color_2))
+p_n=plot!(ax3, objects1[:C], ports=Dict(:C=>[],:A=>[:A],:B=>[:B]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>:gray, :A=>color_1, :B=>color_2))
 ports = lift(x->last.(x) .- Point2f0[(-0.4,0),(0.4,0)], p_n.attributes[:ports])
 arrows!(ax3, ports , Node([Point2f0(-0.3,0),Point2f0(0.3,0)]), linewidth=2, arrowsize = [-20,20])
 text!.(ax3, "P₁", position=(@lift $ports[1]), align=(:right, :bottom), textsize=0.25, color=:black)
@@ -102,7 +104,8 @@ ax2.xticks=[0,0.5,1.0]
 ax1.yticks=[0,0.5,1.0]
 # ax3.ticks = []
 rowsize!(fig.layout, 2, Aspect(2,1)) 
-colsize!(fig.layout, 1, Fixed(75)) 
+colsize!(fig.layout, 1, Fixed(150)) 
+colgap!(fig.layout, 2, Fixed(45)) 
 
 ax0.xticks = [0,0.5,1.0]
 ax0.yticks = [0,0.5,1.0]

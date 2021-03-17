@@ -1,6 +1,10 @@
 using ADSP, CairoMakie
 include("utils.jl")
 
+# draw_rf = true
+
+draw_rf = false
+set_theme!(presentation_theme)
 
 config_1 = """
 refractory_duration: 5.01
@@ -106,7 +110,6 @@ plateau_starts = filter(x->(x.object==:seg && x.event==:plateau_starts), logger_
 
 ## Start plotting
 
-fig = Figure(resolution = (800, 600), show_axis=false)
 
 
 A_starts = [(-4,-i+0.5) for i  in 1:5]
@@ -120,12 +123,13 @@ B_ends = [(0,-6.25-i*0.5) for i  in 1:5]
 ################################################################################
 ## Neuron without active dendrite segment                                     ##
 ################################################################################
+fig = Figure(resolution = (800, 500), show_axis=false)
 xticks,xtickformat = make_manual_ticks([0;50;100;150;spikes_1.t], ["0ms","50ms","100ms","150ms","t₀"])
 yticks,ytickformat = make_manual_ticks(-9.5:-0.5, reverse!(["$(grp)$(sub)" for grp in ["A","B"] for sub in ['₁','₂','₃','₄','₅']]))
 
 # Draw response
 grd = fig[1, 1] = GridLayout()
-ax_res_1 = grd[1,1] = Axis(fig, title = "Point-neuron", height=Fixed(120), xticks=xticks, xtickformat=xtickformat, yticks=yticks, ytickformat=ytickformat)
+ax_res_1 = grd[1,1] = Axis(fig, title = "Point-neuron", height=Fixed(120), xticks=xticks, xtickformat=xtickformat, yticks=yticks, ytickformat=ytickformat, yticklabelsize=14)
 ax_morph_1 = grd[1,2] = Axis(fig, width=Fixed(100), aspect=DataAspect(), backgroundcolor=:transparent)
 
 seg = get_trace(:seg, logger_1.data)
@@ -173,7 +177,7 @@ colgap!(grd, 1, 0)
 ################################################################################
 xticks,xtickformat = make_manual_ticks([0;50;100;150;plateau_starts.t;spikes_2.t;plateau_starts.t.+objects_2[:seg].plateau_duration],["0ms","50ms","100ms","150ms","t₀","t₁","t₀+τ"])
 
-ax_res_2 = grd[2,1] = Axis(fig, title = "Neuron with active dendrite", height=Fixed(120), xticks=xticks, xtickformat=xtickformat, yticks=yticks, ytickformat=ytickformat)
+ax_res_2 = grd[2,1] = Axis(fig, title = "Neuron with active dendrite segment", height=Fixed(120), xticks=xticks, xtickformat=xtickformat, yticks=yticks, ytickformat=ytickformat, yticklabelsize=14)
 
 seg = get_trace(:seg, logger_2.data)
 steps!(ax_res_2, [0;seg.t;150.0], 2.49*[0;Int.(seg.state);0] .- 5.05, color=:transparent, fill=color_1_50)
@@ -219,71 +223,72 @@ ylims!(ax_res_2, (-10.5,0.5))
 ## Draw receptive field example                                               ##
 ################################################################################
 
+
 function make_rf((x₀,y₀), σ)
-    function rf(x,y)
-        r = ((x-x₀)^2 + (y-y₀)^2)/(2*σ^2)
-        inv(π*σ^4)*(1-r)*exp(-r)
+  function rf(x,y)
+    r = ((x-x₀)^2 + (y-y₀)^2)/(2*σ^2)
+    inv(π*σ^4)*(1-r)*exp(-r)
+  end
+end
+
+if draw_rf
+    σ = 1.0
+    r₀ = √(2)*σ # zero-crossing of receptive field
+
+    A_centers = Point2f0[(-2,-2),(-1,-1),(0,0),(1,1),(2,2)]
+    B_centers = Point2f0[(-2,2),(-1,1),(0,0),(1,-1),(2,-2)]
+
+    A_rfs = make_rf.(A_centers,  σ)
+    B_rfs = make_rf.(B_centers,  σ)
+
+    A_rf = (x,y) -> [0.5, 1.0, 1.2, 1.0, 0.5]' * map(f->f(x,y), A_rfs)
+    B_rf = (x,y) -> [0.5, 1.0, 1.2, 1.0, 0.5]' * map(f->f(x,y), B_rfs)
+
+    x = LinRange(-5,5,100)
+    y = LinRange(-5,5,100)
+    xx = repeat(-2:1:2, outer=5)
+    yy = repeat(-2:1:2, inner=5)
+
+
+    ax2 = fig[2, 1][1,1] = Axis(fig, title="Early RF", limits=Rect(-5,5,10,10), aspect = DataAspect(), height=Fixed(150))
+    heatmap!(ax2, x, y, A_rf.(x', y), colormap=:diverging_bwr_40_95_c42_n256, interpolate=true, colorrange=(-A_rf(0,0),A_rf(0,0)))
+    scatter!(ax2, xx, yy, marker=:x, color=:gray)
+    lines!.(ax2, decompose.(Point2f0, Circle.(A_centers,σ)), linewidth=2, color=:black)
+    hidedecorations!(ax2)
+
+    ax3 = fig[2, 1][1,2] = Axis(fig, title="Late RF", limits=Rect(-5,5,10,10), aspect = DataAspect(), height=Fixed(150))
+    heatmap!(ax3, x, y, B_rf.(x', y), colormap=:diverging_bwr_40_95_c42_n256, interpolate=true, colorrange=(-B_rf(0,0),B_rf(0,0)))
+    scatter!(ax3, xx, yy, marker=:x, color=:gray)
+    lines!.(ax3, decompose.(Point2f0, Circle.(B_centers,σ)), linewidth=2, color=:black)
+    hidedecorations!(ax3)
+
+
+    A_y = [ 1.2,  1.4,  1.6,  1.8,  2.0]
+    B_y = [-1.2, -1.4, -1.6, -1.8, -2.0]
+    A_nodes_1 = collect(zip([4,4,4,4,4], A_y))
+    A_nodes_2 = collect(zip([7,7,7,7,7], A_y))
+    B_nodes_1 = collect(zip([4,4,4,4,4], B_y))
+    B_nodes_2 = collect(zip([7,7,7,7,7], B_y))
+
+    ax4 = fig[2,1][1,3] = Axis(fig, title="RF connectome", height=Fixed(150), aspect = DataAspect(), backgroundcolor=:transparent)
+    lines!(ax4, Rect(-5,-5,10,10), color=:black)
+    plot!(ax4, objects_2[:n], branch_width=0.75, branch_length=5.0, root_position=Point2f0(7.0, -2.0), color=Dict(:seg=>color_1,:n=>color_2))
+    hidedecorations!(ax4)
+    hidespines!(ax4)
+
+    poly!.(ax4, decompose.(Point2f0, Circle.(A_centers,σ)), linestyle=:dash, linewidth=2, color=color_1_50)
+    poly!.(ax4, decompose.(Point2f0, Circle.(B_centers,σ)), linestyle=:dot, linewidth=2, color=color_2_50)
+    for i in 1:5
+      lines!(ax4, Point2f0[A_centers[i], A_nodes_1[i], A_nodes_2[i]], linewidth=2, color=color_1)
+      lines!(ax4, Point2f0[B_centers[i], B_nodes_1[i], B_nodes_2[i]], linewidth=2, color=color_2)
     end
+    scatter!(ax4, xx, yy, marker=:x, color=:gray)
+
+    hidedecorations!(ax4)
+    hidespines!(ax4)
+    xlims!(ax4, (-5,9))
+    ylims!(ax4, (-5,5))
 end
-
-
-σ = 1.0
-r₀ = √(2)*σ # zero-crossing of receptive field
-
-A_centers = Point2f0[(-2,-2),(-1,-1),(0,0),(1,1),(2,2)]
-B_centers = Point2f0[(-2,2),(-1,1),(0,0),(1,-1),(2,-2)]
-
-A_rfs = make_rf.(A_centers,  σ)
-B_rfs = make_rf.(B_centers,  σ)
-
-A_rf = (x,y) -> [0.5, 1.0, 1.2, 1.0, 0.5]' * map(f->f(x,y), A_rfs)
-B_rf = (x,y) -> [0.5, 1.0, 1.2, 1.0, 0.5]' * map(f->f(x,y), B_rfs)
-
-x = LinRange(-5,5,100)
-y = LinRange(-5,5,100)
-xx = repeat(-2:1:2, outer=5)
-yy = repeat(-2:1:2, inner=5)
-
-
-ax2 = fig[2, 1][1,1] = Axis(fig, title="Early RF", limits=Rect(-5,5,10,10), aspect = DataAspect(), height=Fixed(150))
-heatmap!(ax2, x, y, A_rf.(x', y), colormap=:diverging_bwr_40_95_c42_n256, interpolate=true, colorrange=(-A_rf(0,0),A_rf(0,0)))
-scatter!(ax2, xx, yy, marker=:x, color=:gray)
-lines!.(ax2, decompose.(Point2f0, Circle.(A_centers,σ)), linewidth=2, color=:black)
-hidedecorations!(ax2)
-
-ax3 = fig[2, 1][1,2] = Axis(fig, title="Late RF", limits=Rect(-5,5,10,10), aspect = DataAspect(), height=Fixed(150))
-heatmap!(ax3, x, y, B_rf.(x', y), colormap=:diverging_bwr_40_95_c42_n256, interpolate=true, colorrange=(-B_rf(0,0),B_rf(0,0)))
-scatter!(ax3, xx, yy, marker=:x, color=:gray)
-lines!.(ax3, decompose.(Point2f0, Circle.(B_centers,σ)), linewidth=2, color=:black)
-hidedecorations!(ax3)
-
-
-A_y = [ 1.2,  1.4,  1.6,  1.8,  2.0]
-B_y = [-1.2, -1.4, -1.6, -1.8, -2.0]
-A_nodes_1 = collect(zip([4,4,4,4,4], A_y))
-A_nodes_2 = collect(zip([7,7,7,7,7], A_y))
-B_nodes_1 = collect(zip([4,4,4,4,4], B_y))
-B_nodes_2 = collect(zip([7,7,7,7,7], B_y))
-
-ax4 = fig[2,1][1,3] = Axis(fig, title="RF connectome", height=Fixed(150), aspect = DataAspect(), backgroundcolor=:transparent)
-lines!(ax4, Rect(-5,-5,10,10), color=:black)
-plot!(ax4, objects_2[:n], branch_width=0.75, branch_length=5.0, root_position=Point2f0(7.0, -2.0), color=Dict(:seg=>color_1,:n=>color_2))
-hidedecorations!(ax4)
-hidespines!(ax4)
-
-poly!.(ax4, decompose.(Point2f0, Circle.(A_centers,σ)), linestyle=:dash, linewidth=2, color=color_1_50)
-poly!.(ax4, decompose.(Point2f0, Circle.(B_centers,σ)), linestyle=:dot, linewidth=2, color=color_2_50)
-for i in 1:5
-  lines!(ax4, Point2f0[A_centers[i], A_nodes_1[i], A_nodes_2[i]], linewidth=2, color=color_1)
-  lines!(ax4, Point2f0[B_centers[i], B_nodes_1[i], B_nodes_2[i]], linewidth=2, color=color_2)
-end
-scatter!(ax4, xx, yy, marker=:x, color=:gray)
-
-hidedecorations!(ax4)
-hidespines!(ax4)
-xlims!(ax4, (-5,9))
-ylims!(ax4, (-5,5))
-
 # Save figures
 save(joinpath("figures","spatio_temporal_rf.pdf"), fig)
 save(joinpath("figures","spatio_temporal_rf.svg"), fig)
