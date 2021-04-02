@@ -207,8 +207,8 @@ end
 # steps!(ax213, [0;n3.t;900], -4 .+ 0.9 .* [0;Int.(n3.state);0], fill=color_3_50)
 
 plot!(ax22, objects[:n1], angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n1=>color_3, :n2=>color_3, :n3=>color_3, :seg1=>color_1, :seg2=>color_2))
-plot!(ax22, objects[:n2], root_position=Point2f0(1,0), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n1=>color_3, :n2=>color_3, :n3=>color_3, :seg1=>color_1, :seg2=>color_2))
-plot!(ax22, objects[:n3], root_position=Point2f0(0.5,-1), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n3=>RGBAf0(0.2,0.2,0.2,1.0)))
+plot!(ax22, objects[:n2], root_position=Point2f0(1,-2), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n1=>color_3, :n2=>color_3, :n3=>color_3, :seg1=>color_1, :seg2=>color_2))
+plot!(ax22, objects[:n3], root_position=Point2f0(0.5,-4), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n3=>RGBAf0(0.2,0.2,0.2,1.0)))
 
 ################################################################################
 hidedecorations!(ax12)
