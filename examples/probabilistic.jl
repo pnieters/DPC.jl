@@ -1,6 +1,7 @@
 using ADSP, CairoMakie
 include("utils.jl")
-set_theme!(presentation_theme)
+# set_theme!(presentation_theme)
+set_theme!(mytheme)
 
 config0 = """
 neurons:
@@ -15,12 +16,13 @@ config1 = """
 neurons:
   - id: C
     θ_syn: 0
-    θ_seg: 2
+    θ_seg: 1
     branches:
       - id: A
         θ_syn: 5
-      - id: B
-        θ_syn: 5
+        branches:
+          - id: B
+            θ_syn: 5
 """
 
 config2 = """
@@ -60,64 +62,76 @@ firing_probabilities2 = [(prob_A .= a; prob_B .= b; P_fire(objects2[:C], volleys
 
 ## Plotting
 
-fig = Figure(resolution=(900,800))
-ax0 = fig[1,2:3] = Axis(fig, title="Single segment", xlabel="Synaptic transmission probability P₀", ylabel="Plateau probability")#, aspect=DataAspect()
-cell_col_1 = fig[1,4]
-ax0b = fig[1,1] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
-ax3 = fig[2,1] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
-ax1 = fig[2,2] = Axis(fig, xlabel="P₁", ylabel="P₂", title="'AND' (Θ=2)")
-ax2 = fig[2,3] = Axis(fig, xlabel="P₁", ylabel="P₂", title="'OR' (Θ=1)")
-cell_col_2 = fig[2,4]
+fig = Figure(resolution=(800,700))
+ax1a = fig[1,1] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
+ax2a = fig[1,2] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
+ax3a = fig[1,3] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
+ax1b = fig[2,1] = Axis(fig, title="single\nsegment", xlabel="P₀", ylabel="Plateau probability")#, aspect=DataAspect()
+ax2b = fig[2,2] = Axis(fig, xlabel="P₁", ylabel="P₂", title="sequential\nsegments")
+ax3b = fig[2,3] = Axis(fig, xlabel="P₁", ylabel="P₂", title="parallel\nsegments")
+cell_col_1 = fig[3,1]
+cell_col_2 = fig[3,2:3]
 
 colors = cgrad(:viridis,length(firing_probabilities0), categorical=true)
 for (prob,col) in zip(firing_probabilities0, colors)
-    lines!(ax0, probabilities, prob, color=col, linewidth=3)
+    lines!(ax1b, probabilities, prob, color=col, linewidth=3)
 end
-ax_col_1 = Colorbar(cell_col_1, width=10, colormap=colors, limits=(0.5,10.5), ticks=1:10, label="Threshold (out of $(num_synapses) synapses)")
+ax_col_1 = Colorbar(cell_col_1, height=10, colormap=colors, limits=(0.5,10.5), ticks=1:10, label="Threshold θ₀", vertical=false, flipaxis = false)
 
-contourf!(ax1, probabilities, probabilities, firing_probabilities1, colormap=:viridis, colorrange=(0,1))
+contourf!(ax2b, probabilities, probabilities, firing_probabilities1, colormap=:viridis, colorrange=(0,1))
 
-contourf!(ax2, probabilities, probabilities, firing_probabilities2, colormap=:viridis, colorrange=(0,1))
+contourf!(ax3b, probabilities, probabilities, firing_probabilities2, colormap=:viridis, colorrange=(0,1))
 
-p_n=plot!(ax3, objects1[:C], ports=Dict(:C=>[],:A=>[:A],:B=>[:B]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>:gray, :A=>color_1, :B=>color_2))
+p_n=plot!(ax3a, objects2[:C], ports=Dict(:C=>[],:A=>[:A],:B=>[:B]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>RGBAf0(0.5,0.5,0.5,0.5), :A=>color_1, :B=>color_2))
 ports = lift(x->last.(x) .- Point2f0[(-0.4,0),(0.4,0)], p_n.attributes[:ports])
-arrows!(ax3, ports , Node([Point2f0(-0.3,0),Point2f0(0.3,0)]), linewidth=2, arrowsize = [-20,20])
-text!.(ax3, "P₁", position=(@lift $ports[1]), align=(:right, :bottom), textsize=0.25, color=:black)
-text!.(ax3, "P₂", position=(@lift $ports[2]), align=(:left, :bottom), textsize=0.25, color=:black)
+arrows!(ax3a, ports , Node([Point2f0(-0.3,0),Point2f0(0.3,0)]), linewidth=2, arrowsize = [-20,20])
+text!.(ax3a, "P₁", position=(@lift $ports[1]), align=(:right, :bottom), textsize=0.25, color=:black)
+text!.(ax3a, "P₂", position=(@lift $ports[2]), align=(:left, :bottom), textsize=0.25, color=:black)
 
-p_n=plot!(ax0b, objects0[:C], ports=Dict(:C=>[:C],:A=>[:A]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>:gray, :A=>color_1, :B=>color_2))
+p_n=plot!(ax2a, objects1[:C], ports=Dict(:C=>[],:A=>[:A],:B=>[:B]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>RGBAf0(0.5,0.5,0.5,0.5), :A=>color_1, :B=>color_2))
+ports = lift(x->last.(x) .- Point2f0[(-0.4,0),(0.4,0)], p_n.attributes[:ports])
+arrows!(ax2a, ports , Node([Point2f0(-0.3,0),Point2f0(0.3,0)]), linewidth=2, arrowsize = [-20,20])
+text!.(ax2a, "P₁", position=(@lift $ports[1]), align=(:right, :bottom), textsize=0.25, color=:black)
+text!.(ax2a, "P₂", position=(@lift $ports[2]), align=(:left, :bottom), textsize=0.25, color=:black)
+
+p_n=plot!(ax1a, objects0[:C], ports=Dict(:C=>[:C],:A=>[:A]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>RGBAf0(0.5,0.5,0.5,0.5), :A=>color_1, :B=>color_2))
 port = lift(x->[x[1][2] - Point2f0(-0.4,0)], p_n.attributes[:ports])
-arrows!(ax0b, port , [Point2f0(-0.3,0)], linewidth=2, arrowsize = -20)
-text!.(ax0b, "P₀", position=(@lift $ports[1]), align=(:right, :bottom), textsize=0.25, color=:black)
+arrows!(ax1a, port , [Point2f0(-0.3,0)], linewidth=2, arrowsize = -20)
+text!.(ax1a, "P₀", position=(@lift $ports[1]), align=(:right, :bottom), textsize=0.25, color=:black)
 
 
-ax_col_2 = Colorbar(cell_col_2, width=10, colormap=:viridis, limits=(0,1), label="Plateau probability")
+ax_col_2 = Colorbar(cell_col_2, height=10, colormap=:viridis, limits=(0,1), label="Plateau probability for θ₁=θ₂=5", vertical=false, flipaxis = false)
 
-hidedecorations!(ax3)
-hidespines!(ax3)
-hidedecorations!(ax0b)
-hidespines!(ax0b)
+hidedecorations!(ax3a)
+hidespines!(ax3a)
+hidedecorations!(ax2a)
+hidespines!(ax2a)
+hidedecorations!(ax1a)
+hidespines!(ax1a)
 
-hideydecorations!(ax2)
-ax1.xticks = [0,0.5,1.0]
-ax2.xticks=[0,0.5,1.0]
-ax1.yticks=[0,0.5,1.0]
-# ax3.ticks = []
-rowsize!(fig.layout, 2, Aspect(2,1)) 
-colsize!(fig.layout, 1, Fixed(150)) 
+hideydecorations!(ax3b)
+ax2b.xticks = [0,0.5,1.0]
+ax3b.xticks=[0,0.5,1.0]
+ax2b.yticks=[0,0.5,1.0]
+rowsize!(fig.layout, 2, Aspect(3,1)) 
+colgap!(fig.layout, 1, Fixed(45)) 
 colgap!(fig.layout, 2, Fixed(45)) 
 
-ax0.xticks = [0,0.5,1.0]
-ax0.yticks = [0,0.5,1.0]
-ax1.xticks = [0,0.5,1.0]
-ax1.yticks = [0,0.5,1.0]
-ax2.xticks = [0,0.5,1.0]
-ax2.yticks = [0,0.5,1.0]
+ax1b.xticks = [0,0.5,1.0]
+ax1b.yticks = [0,0.5,1.0]
+ax2b.xticks = [0,0.5,1.0]
+ax2b.yticks = [0,0.5,1.0]
+ax3b.xticks = [0,0.5,1.0]
+ax3b.yticks = [0,0.5,1.0]
 
-ax0.limits[] = Rect(0.0f0,0.0f0,1.0f0,1.0f0)
-ax1.limits[] = Rect(0.0f0,0.0f0,1.0f0,1.0f0)
-ax2.limits[] = Rect(0.0f0,0.0f0,1.0f0,1.0f0)
-ax1.yticks[] = [0,0.5,1.0]
+ylims!(ax1a, [-0.25,2.25])
+ylims!(ax2a, [-0.25,2.25])
+ylims!(ax3a, [-0.25,2.25])
+
+ax1b.limits[] = Rect(0.0f0,0.0f0,1.0f0,1.0f0)
+ax2b.limits[] = Rect(0.0f0,0.0f0,1.0f0,1.0f0)
+ax3b.limits[] = Rect(0.0f0,0.0f0,1.0f0,1.0f0)
+ax2b.yticks[] = [0,0.5,1.0]
 
 
 

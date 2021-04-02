@@ -17,7 +17,7 @@ end
 pal = AbstractPlotting.Palette(:Dark2)
 
 mytheme = Theme(
-    fontsize = 16,
+    fontsize = 18,
     font = "Linux Libertine O",
     Axis = (
         backgroundcolor = :gray90,
@@ -27,11 +27,11 @@ mytheme = Theme(
         topspinevisible = false,
         xgridcolor = :white,
         ygridcolor = :white,
-        titlesize = 18,
-        xticklabelsize = 14,
-        yticklabelsize = 14,
-        xlabelsize = 16,
-        ylabelsize = 16,
+        titlesize = 20,
+        xticklabelsize = 16,
+        yticklabelsize = 16,
+        xlabelsize = 18,
+        ylabelsize = 18,
         xlabelpadding = 5f0,
         ylabelpadding = 5f0,
         xticklabelcolor = :gray10,
@@ -244,11 +244,15 @@ function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron))
         # draw polygon for the branch
         poly!(treeplot, branch_poly, color=c, strokewidth = 1, strokecolor=c)
 
-        # draw circle to cap off branch
+        # draw circles to cap off branch
         poly!(treeplot, lift(w1,serialized, offset) do w1,ser,off
             node_dict = Dict(ser.nodes...)
             b2 = node_dict[name]
             decompose(Point2f0, Circle(off + b2, w1/2))
+        end, color=c, strokewidth = 1, strokecolor=c)
+
+        poly!(treeplot, lift(w1,offset) do w1,off
+            decompose(Point2f0, Circle(off, w1/2))
         end, color=c, strokewidth = 1, strokecolor=c)
     end
 
