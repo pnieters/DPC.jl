@@ -159,7 +159,7 @@ function handle!(event::Event, queue!, logger!)
         # if the event is not relevant any more (the current plateau is not the one that triggered this event), ignore
         # if the event is still relevant, definitely turn the segment off 
         # -> this may also turn off upstream segments
-        if event.created >= event.target.last_activated[]
+        if event.created >= event.target.last_activated
             maybe_off!(event.target, event.t, queue!, logger!)
         end
     elseif event.type == :refractory_period_ends
@@ -249,8 +249,18 @@ end
 """Check if this segment was just turned on; if so, backpropagate!"""
 function maybe_on!(obj::Segment, now, queue!, logger!)
     update_state!(obj)
-    # if the segment is currently off, but the plateau conditions are satisfied, turn on
-    return if ~obj.active && obj.state_syn >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state == voltage_elevated)
+    return if obj.active && obj.state_syn >= obj.θ_syn #&& (isempty(obj.next_upstream) || obj.state == voltage_elevated)
+        # if the segment is already on, but there is sufficient EPSP, re-trigger!
+        @debug "$(now): Re-triggered segment $(obj.id) and extended its plateau!"
+        logger!(now, :plateau_extended, obj.id, obj.state)
+
+        # Re-schedule plateau-end time
+        obj.last_activated = now
+        queue!(Event(:plateau_ends, now, now+obj.plateau_duration, obj))
+        true
+        
+    elseif ~obj.active && obj.state_syn >= obj.θ_syn && (isempty(obj.next_upstream) || obj.state == voltage_elevated)
+        # if the segment is currently off, but the plateau conditions are satisfied, turn on
         @debug "$(now): Triggered segment $(obj.id) and it turned on!"
         
         # The segment is now active
@@ -268,6 +278,7 @@ function maybe_on!(obj::Segment, now, queue!, logger!)
         end
         
         # Each segment must turn off
+        obj.last_activated = now
         queue!(Event(:plateau_ends, now, now+obj.plateau_duration, obj))
         true
     else

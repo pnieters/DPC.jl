@@ -1,7 +1,7 @@
 import YAML
 using DataStructures: OrderedDict
 
-export P_superthreshold, P_fire, load_network, save_network, get_trace
+export load_network, save_network, P_superthreshold, P_fire, get_trace
 
 """get_trace(id, data)
 
