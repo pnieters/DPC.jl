@@ -111,14 +111,14 @@ end
 # steps!(ax11, [0;seg1.t;900], 1 .+ 0.45 .* [0;Int.(seg1.state);0], fill=color_1_50)
 
 
-lines!(ax11, Rect(plateau1_starts[]-5.5, 9.95, 11, 5.1), color=:darkgray, linewidth=2)
-lines!(ax11, Rect(plateau2_starts[]-5.5, 4.95, 11, 5.1), color=:darkgray, linewidth=2)
-lines!(ax11, Rect(spike_times[]-5.5, -0.05, 11, 5.1), color=:darkgray, linewidth=2)
+lines!(ax11, Rect(plateau1_starts[]-5.5, 9.95, 11, 5.1), color=:gray10, linewidth=2)
+lines!(ax11, Rect(plateau2_starts[]-5.5, 4.95, 11, 5.1), color=:gray10, linewidth=2)
+lines!(ax11, Rect(spike_times[]-5.5, -0.05, 11, 5.1), color=:gray10, linewidth=2)
 
-arrows!(ax11, Point2f0[(spike_times[]-5.5,2.5)], Point2f0[(-59.5,0)], linewidth=2, arrowsize = 20, linecolor=:darkgray, arrowcolor=:darkgray)
-arrows!(ax11, Point2f0[(spike_times[]+5.5,2.5)], Point2f0[(59.5,0)], linewidth=2, arrowsize = -20, linecolor=:darkgray, arrowcolor=:darkgray)
+arrows!(ax11, Point2f0[(spike_times[]-5.5,2.5)], Point2f0[(-59.5,0)], linewidth=2, arrowsize = 20, linecolor=:gray10, arrowcolor=:gray10)
+arrows!(ax11, Point2f0[(spike_times[]+5.5,2.5)], Point2f0[(59.5,0)], linewidth=2, arrowsize = -20, linecolor=:gray10, arrowcolor=:gray10)
 
-linesegments!(ax11, repeat(spike_times, inner=2), repeat([0,16], outer=length(spike_times)), linewidth=3, color=:gray10)
+linesegments!(ax11, repeat(spike_times, inner=2), repeat([0,16], outer=length(spike_times)), linewidth=3, linestyle=:dash, color=:gray10)
 ylims!(ax11, (-0.5,15.5))
 
 plot!(ax12, objects[:n], angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_3, :seg1=>color_1, :seg2=>color_2))

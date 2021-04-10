@@ -75,13 +75,13 @@ synapses:
 volleys_1 = [(25.0, :i1), (25.0, :i2)]
 input_1=[ Event(:input_spikes, 0.0, t+τ-0.5, objects_1[Symbol("$(pop)$(i)")]) for (t, pop) in volleys_1 for (i,τ) in enumerate(5*rand(5))]
 
+(net_2,objects_2) = load_network(YAML_source=config_2)
 volleys_2 = [(25.0, :i1), (75.0, :i2)]
 input_2=[ Event(:input_spikes, 0.0, t+τ-0.5, objects_2[Symbol("$(pop)$(i)")]) for (t, pop) in volleys_2 for (i,τ) in enumerate(5*rand(5))]
 
 logger_1=simulate!(net_1, input_1, 200.0)
 spikes_1 = filter(x->(x.object==:n && x.event==:spikes), logger_1.data)
 
-(net_2,objects_2) = load_network(YAML_source=config_2)
 
 
 logger_2=simulate!(net_2, input_2, 200.0)
@@ -126,11 +126,11 @@ for (i,syn) in enumerate([:syn21, :syn22, :syn23, :syn24, :syn25])
   steps!(ax_res_1, [0;epsp.t;200.0], -5.005 + -i .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color_2)
 end
 
-lines!(ax_res_1, Rect(spikes_1.t[]-5.5, -10.05, 11, 10.1), color=:darkgray, linewidth=2)
-lines!(ax_res_1, spikes_1.t, [-10.1, 0.1], linewidth=3, color=:black)
+lines!(ax_res_1, Rect(spikes_1.t[]-5.5, -10.05, 11, 10.1), color=:gray10, linewidth=2)
+lines!(ax_res_1, spikes_1.t, [-10.1, 0.1], linewidth=3, linestyle=:dash, color=:gray10)
 
-# arrows!(ax_res_1, Point2f0[(16,-5)], Point2f0[(-1,0)], linewidth=2, arrowsize = 20, color=:darkgray)
-# arrows!(ax_res_1, Point2f0[(27,-5)], Point2f0[(1,0)], linewidth=2, arrowsize = -20, color=:darkgray)
+# arrows!(ax_res_1, Point2f0[(16,-5)], Point2f0[(-1,0)], linewidth=2, arrowsize = 20, color=:gray10)
+# arrows!(ax_res_1, Point2f0[(27,-5)], Point2f0[(1,0)], linewidth=2, arrowsize = -20, color=:gray10)
 
 ylims!(ax_res_1, (-10.5,0.5))
 xlims!(ax_res_1, -5, 210)
@@ -173,11 +173,11 @@ for (i,syn) in enumerate([:syn21, :syn22, :syn23, :syn24, :syn25])
   steps!(ax_res_2, [0;epsp.t;150.0], -5.005 + -i .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color_2)
 end
 
-lines!(ax_res_2, Rect(plateau_starts.t[]-5.5, -5.25, 11, 5.5), color=:darkgray, linewidth=2)
-lines!(ax_res_2, Rect(spikes_2.t[]-5.5, -10.25, 11, 5.5), color=:darkgray, linewidth=2)
-lines!(spikes_2.t, [-10.1, 0.1], linewidth=3, color=:black)
-arrows!(ax_res_2, Point2f0[(spikes_2.t[]-5.5,-7.5)], Point2f0[(-44,0)], linewidth=2, arrowsize = 20, linecolor=:darkgray, arrowcolor=:darkgray)
-arrows!(ax_res_2, Point2f0[(spikes_2.t[]+5.5,-7.5)], Point2f0[(44,0)], linewidth=2, arrowsize = -20, linecolor=:darkgray, arrowcolor=:darkgray)
+lines!(ax_res_2, Rect(plateau_starts.t[]-5.5, -5.25, 11, 5.5), color=:gray10, linewidth=2)
+lines!(ax_res_2, Rect(spikes_2.t[]-5.5, -10.25, 11, 5.5), color=:gray10, linewidth=2)
+lines!(spikes_2.t, [-10.1, 0.1], linewidth=3, linestyle=:dash, color=:gray10)
+arrows!(ax_res_2, Point2f0[(spikes_2.t[]-5.5,-7.5)], Point2f0[(-44,0)], linewidth=2, arrowsize = 20, linecolor=:gray10, arrowcolor=:gray10)
+arrows!(ax_res_2, Point2f0[(spikes_2.t[]+5.5,-7.5)], Point2f0[(44,0)], linewidth=2, arrowsize = -20, linecolor=:gray10, arrowcolor=:gray10)
 
 
 
