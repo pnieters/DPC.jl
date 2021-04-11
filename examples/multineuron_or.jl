@@ -272,7 +272,7 @@ hidespines!(ax22)
 ax22.backgroundcolor = :transparent
 
 colsize!(fig.layout, 2, Fixed(125))
-rowsize!(fig.layout, 1, Relative(3/7))
+rowsize!(fig.layout, 1, Relative(15/(32+6)))
 rowsize!(lower_grid, 3, Relative(7/17))
 hidexdecorations!(ax211, grid=false)
 hidexdecorations!(ax212, grid=false)
