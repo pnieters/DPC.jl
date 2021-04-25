@@ -1,7 +1,7 @@
 import YAML
 using DataStructures: OrderedDict
 
-export load_network, save_network, P_superthreshold, P_fire, get_trace
+export load_network, save_network, get_trace
 
 """get_trace(id, data)
 
@@ -18,44 +18,6 @@ function get_trace(id, data)
     end
 end
 
-"""P_superthreshold(threshold, event_probabilities, event_weights)
-
-Compute the probability with which a sum of events with given `event_weights` and `event_probabilities` 
-would exceed a given `threshold`.
-"""
-function P_superthreshold(threshold, event_probabilities, event_weights)
-    @assert length(event_probabilities) == length(event_weights)
-    if isempty(event_probabilities)
-        return threshold ≤ 0 ? 1.0 : 0.0
-    end
-    
-    d = zeros(Bool, length(event_weights))
-    P = zero(Float64)
-    for i in 1:2^length(event_weights)
-        digits!(d, i, base=2)
-        if event_weights'*d ≥ threshold
-            p = prod(ifelse.(d, event_probabilities, one(Float64) .- event_probabilities))
-            P += p 
-        end
-    end
-    P
-end
-
-"""P_fire(obj, volleys)
-
-Compute the probability with which the `volleys` (provided they occur in the correct temporal sequence) 
-would trigger a spike/plateau in `obj`
-"""
-function P_fire(obj, volleys)
-    (probabilities, weights) = get(volleys, obj.id, ([],[]))
-    P_syn = P_superthreshold(obj.θ_syn, probabilities, weights)
-    return if isempty(obj.next_upstream) 
-        P_syn
-    else
-        P_seg = P_superthreshold(obj.θ_seg, P_fire.(obj.next_upstream, Ref(volleys)), ones(length(obj.next_upstream)))
-        P_syn*P_seg
-    end
-end
 
 """
     load_network(YAML_source)
