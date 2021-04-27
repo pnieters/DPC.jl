@@ -116,13 +116,11 @@ show_spines = (
 fig = Figure(resolution = (800, 550))
 ax11 = fig[1,1] = Axis(fig; title="Effective paths", backgroundcolor=:transparent, show_spines...)
 hidedecorations!(ax11)
-gl = fig[1,2:3] = GridLayout()
-ax121 = gl[1,1] = Axis(fig, title="Expected volley sizes for the highlighted path")
-ax122 = gl[2,1] = Axis(fig, title="Activity for the highlighted path", xlabel="time [ms]")
-hidexdecorations!(ax121, grid=false)
-hideydecorations!(ax122, label=false)
-ax14 = fig[1,4] = Axis(fig; aspect=DataAspect(), backgroundcolor=:transparent)
-hidedecorations!(ax14)
+gl = fig[1,2:4] = GridLayout()
+ax12 = gl[1,1] = Axis(fig, title="Activity for the highlighted path", xlabel="time [ms]")
+hideydecorations!(ax12, label=false)
+ax13 = gl[1,2] = Axis(fig; aspect=DataAspect(), backgroundcolor=:transparent)
+hidedecorations!(ax13)
 ax21 = fig[2,1] = Axis(fig; title="Optimal path", backgroundcolor=:transparent, show_spines...)
 hidedecorations!(ax21)
 ax22 = fig[2,2] = Axis(fig, title="Speed", xlabel="run speed [m/s]", ylabel="spike probability")
@@ -133,53 +131,46 @@ hidedecorations!(ax24)
 
 rowsize!(fig.layout, 1, Aspect(1, grid_params.yscale/grid_params.xscale))
 rowsize!(fig.layout, 2, Aspect(1, grid_params.yscale/grid_params.xscale))
-
+colsize!(gl, 2, Relative(0.1))
 linkaxes!(ax11, ax21)
 linkaxes!(ax11, ax23)
 linkaxes!(ax11, ax24)
 
-linkxaxes!(ax121, ax122)
 
 
 # Plot the stochastically sampled paths
-pop!(paths)
-for path in paths
+for path in paths[2:end]
     lines!(ax11, path.x, path.y, linewidth=2, color=RGBAf0(0.2,0.2,0.2,0.5))
 end
-lines!(ax11, p1.x, p1.y, linewidth=4, color=color_1)
+lines!(ax11, paths[1].x, paths[1].y, linewidth=4, color=color_4)
 
-# Plot volley sizes
-for (pop,color) in zip(populations,gridcell_colors)
-    volley_size=pop.rf.(zip(special_path.path.x, special_path.path.y)).*length(pop.neurons)
-    band!(ax121, tt, 0, volley_size; color=RGBAf0(RGB(to_color(color)),0.5))
-end
 
 # Plot the spikes, plateaus and rectangles to highlight plateau triggers
 seg1 = get_trace(:seg1, special_path.logger.data)
-steps!(ax122, [0;seg1.t;300e-3], 19.9*[0;Int.(seg1.state).>1;0] .- 20.05, color=:transparent, fill=RGBAf0(RGB(to_color(gridcell_colors[1])),0.5))
+steps!(ax12, [0;seg1.t;300e-3], 19.9*[0;Int.(seg1.state).>1;0] .- 20.05, color=:transparent, fill=color_1_50)
 seg2 = get_trace(:seg2, special_path.logger.data)
-steps!(ax122, [0;seg2.t;300e-3], 19.9*[0;Int.(seg2.state).>1;0] .- 40.05, color=:transparent, fill=RGBAf0(RGB(to_color(gridcell_colors[2])),0.5))
-for (i,color) in enumerate(gridcell_colors)
+steps!(ax12, [0;seg2.t;300e-3], 19.9*[0;Int.(seg2.state).>1;0] .- 40.05, color=:transparent, fill=color_2_50)
+for (i,color) in enumerate((color_1, color_2, color_3))
     for j in 1:20
         epsp = get_trace(Symbol("syn$(i)$(lpad(j,2,"0"))"), special_path.logger.data)
-        steps!(ax122, [0;epsp.t;300e-3],-(i-1)*20 .+ -j .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color)
+        steps!(ax12, [0;epsp.t;300e-3],-(i-1)*20 .+ -j .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color)
     end
 end
-lines!(ax122, Rect(plateau_starts_1.t[]-5.5e-3, -20.25, 11e-3, 20.5), color=:gray10, linewidth=2)
+lines!(ax12, Rect(plateau_starts_1.t[]-5.5e-3, -20.25, 11e-3, 20.5), color=color_1, linewidth=2)
 for t in plateau_extended_1.t
-    lines!(ax122, [t,t], [-20.25, -0.25], color=:gray10, linewidth=2)
+    lines!(ax12, [t,t], [-20.25, -0.25], color=color_1, linewidth=2)
 end
-lines!(ax122, Rect(plateau_starts_2.t[]-5.5e-3, -40.25, 11e-3, 20.5), color=:gray10, linewidth=2)
+lines!(ax12, Rect(plateau_starts_2.t[]-5.5e-3, -40.25, 11e-3, 20.5), color=color_2, linewidth=2)
 for t in plateau_extended_2.t
-    lines!(ax122, [t,t], [-40.25, -20.25], color=:gray10, linewidth=2)
+    lines!(ax12, [t,t], [-40.25, -20.25], color=color_2, linewidth=2)
 end
-lines!(ax122, Rect(spike_times.t[1]-5.5e-3, -60.25, 11e-3, 20.5), color=:gray10, linewidth=2)
+lines!(ax12, Rect(spike_times.t[1]-5.5e-3, -60.25, 11e-3, 20.5), color=color_3, linewidth=2)
 
 # Plot the neuron
-plot!(ax14, objects[:n],
+plot!(ax13, objects[:n],
     branch_width=1, 
     branch_length=8.0, 
-    color=Dict(:n=>color_3, :seg1=>color_2, :seg2=>color_1)
+    color=Dict(:n=>color_3, :seg1=>color_1, :seg2=>color_2)
 )
 
 # Plot the optimal path
@@ -188,7 +179,7 @@ path_opt = generate_straight_path(path_trange, α_opt, v_opt, x₀_opt)
 arrows!(ax21, Point2f0[path_start], Point2f0[path_end .- path_start], linewidth=2, color=:black, arrowsize=10)
 
 # Plot the speed-dependent spike probability
-lines!(ax22, vs, prob_speed, color=color_1, linewidth=2)
+lines!(ax22, vs, prob_speed, color=color_4, linewidth=2)
 vlines!(ax22, [v_opt], linestyle=:dash, color=:gray, linewidth=2)
 
 # Plot the orientation-dependent spike probability
@@ -200,8 +191,8 @@ for (p,α,x₀) in zip(prob_rotated, αs, x₀s_rotated)
     (path_start,path_end) = path.(path_trange)
     arrows!(ax23, Point2f0[path_start], Point2f0[path_end .- path_start], linewidth=2, linecolor=RGBAf0(0.2,0.2,0.2,p), arrowcolor=RGBAf0(0.2,0.2,0.2,p), arrowsize=5)
 end
-poly!(ax23, Point2f0.(eachrow(hist_rotated)), color=color_1_50)
-lines!(ax23, Point2f0.(eachrow(hist_rotated)), linewidth=2, color=color_1)
+poly!(ax23, Point2f0.(eachrow(hist_rotated)), color=color_4_50)
+lines!(ax23, Point2f0.(eachrow(hist_rotated)), linewidth=2, color=color_4)
 
 
 # Plot the offset-dependent spike probability
@@ -224,8 +215,8 @@ for (p,x₀) in zip(prob_offset, x₀s_offset)
     (path_start,path_end) = path.(path_trange)
     arrows!(ax24, Point2f0[path_start], Point2f0[path_end .- path_start], linewidth=2, linecolor=RGBAf0(0.2,0.2,0.2,p), arrowcolor=RGBAf0(0.2,0.2,0.2,p), arrowsize=5)
 end
-poly!(ax24, Point2f0.(eachrow(hist_offset)), color=color_1_50)
-lines!(ax24, Point2f0.(eachrow(hist_offset)), linewidth=2, color=color_1)
+poly!(ax24, Point2f0.(eachrow(hist_offset)), color=color_4_50)
+lines!(ax24, Point2f0.(eachrow(hist_offset)), linewidth=2, color=color_4)
 
 xlims!(ax11, (domain[1][1],domain[2][1]))
 ylims!(ax11, domain[1][2],domain[2][2])

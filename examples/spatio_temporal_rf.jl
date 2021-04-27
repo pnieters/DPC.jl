@@ -204,6 +204,7 @@ xlims!(ax_res_2, -5, 210)
 ################################################################################
 ## Draw receptive field                                                       ##
 ################################################################################
+#=
 grd_rf = fig[1, 2] = GridLayout()
 ax_schema = grd_rf[1:3,2] = Axis(fig,  backgroundcolor=:transparent, aspect=DataAspect())
 ax_rf_1 = grd_rf[1,1] = Axis(fig)
@@ -286,8 +287,9 @@ hidedecorations!(ax_rf_3)
 colsize!(grd_rf, 1, Aspect(1,1))
 colsize!(grd_rf, 2, Aspect(1,1))
 colsize!(fig.layout, 2, Relative(0.3))
+=#
 
-# Save figures
+## Save figures
 save(joinpath("figures","spatio_temporal_rf.pdf"), fig)
 save(joinpath("figures","spatio_temporal_rf.svg"), fig)
 save(joinpath("figures","spatio_temporal_rf.png"), fig)

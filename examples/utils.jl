@@ -62,8 +62,8 @@ color_3 = pal.colors[3]
 color_3_50 = RGBAf0(color_3.r,color_3.g,color_3.b,0.5)
 color_3_25 = RGBAf0(color_3.r,color_3.g,color_3.b,0.25)
 color_4 = pal.colors[4]
-color_4_50 = RGBAf0(color_3.r,color_3.g,color_3.b,0.5)
-color_4_25 = RGBAf0(color_3.r,color_3.g,color_3.b,0.25)
+color_4_50 = RGBAf0(color_4.r,color_4.g,color_4.b,0.5)
+color_4_25 = RGBAf0(color_4.r,color_4.g,color_4.b,0.25)
 
 """
 Computes diameters for branches to satisfy Rall's condition.

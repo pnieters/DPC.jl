@@ -82,8 +82,7 @@ xticks,xtickformat = make_manual_ticks([0;100;plateau1_starts;plateau2_starts;pl
 yticks,ytickformat = make_manual_ticks(0.5:14.5, reverse!(["$(grp)$(sub)" for grp in ["A","B","C"] for sub in ['₁','₂','₃','₄','₅']]))
 
 fig = Figure(resolution = (800, 400))
-grd = fig[2, 1] = GridLayout()
-grd_rf = fig[1:2, 2] = GridLayout()
+grd = fig[1, 1] = GridLayout()
 ax11 = grd[1, 1] = Axis(fig, title = "Neuron with two active dendrite segments", 
     height=Fixed(180),
     xticks=xticks, 
@@ -126,9 +125,12 @@ plot!(ax12, objects[:n], angle_between=20/180*π, branch_width=0.2, branch_lengt
 
 hidedecorations!(ax12)
 
+
 ################################################################################
 ## Draw receptive field                                                       ##
 ################################################################################
+#=
+grd_rf = fig[1:2, 2] = GridLayout()
 
 ax_rf_1 = grd_rf[1,1] = Axis(fig, aspect=DataAspect())
 ax_rf_2 = grd_rf[1,2] = Axis(fig, aspect=DataAspect())
@@ -217,6 +219,8 @@ ylims!(ax_schema, -2,10)
 colsize!(fig.layout, 2, Relative(0.45))
 colgap!(fig.layout, 1, Fixed(50))
 rowsize!(grd_rf, 1, Aspect(1,1))
+=#
+## Save
 
 save(joinpath("figures","invariant_rf.pdf"), fig)
 save(joinpath("figures","invariant_rf.svg"), fig)
