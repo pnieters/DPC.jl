@@ -64,73 +64,73 @@ inputs:
 - id: i320
 neurons:
 - id: n
-  θ_syn: 5
   θ_seg: 1
+  θ_syn: 8 #5
   branches: 
     - id: seg2
       θ_seg: 1
-      θ_syn: 5
+      θ_syn: 8 #5
       branches: 
         - id: seg1
-          θ_syn: 5
+          θ_syn: 8 #5
 synapses:
-- {id: syn101, source: i101, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn102, source: i102, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn103, source: i103, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn104, source: i104, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn105, source: i105, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn106, source: i106, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn107, source: i107, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn108, source: i108, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn109, source: i109, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn110, source: i110, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn111, source: i111, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn112, source: i112, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn113, source: i113, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn114, source: i114, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn115, source: i115, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn116, source: i116, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn117, source: i117, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn118, source: i118, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn119, source: i119, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn120, source: i120, delay: 1e-3, target: seg1, weight: [1.0, 0.5]}
-- {id: syn201, source: i201, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn202, source: i202, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn203, source: i203, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn204, source: i204, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn205, source: i205, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn206, source: i206, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn207, source: i207, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn208, source: i208, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn209, source: i209, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn210, source: i210, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn211, source: i211, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn212, source: i212, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn213, source: i213, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn214, source: i214, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn215, source: i215, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn216, source: i216, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn217, source: i217, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn218, source: i218, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn219, source: i219, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn220, source: i220, delay: 1e-3, target: seg2, weight: [1.0, 0.5]}
-- {id: syn301, source: i301, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn302, source: i302, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn303, source: i303, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn304, source: i304, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn305, source: i305, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn306, source: i306, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn307, source: i307, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn308, source: i308, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn309, source: i309, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn310, source: i310, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn311, source: i311, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn312, source: i312, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn313, source: i313, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn314, source: i314, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn315, source: i315, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn316, source: i316, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn317, source: i317, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn318, source: i318, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn319, source: i319, delay: 1e-3, target: n, weight: [1.0, 0.5]}
-- {id: syn320, source: i320, delay: 1e-3, target: n, weight: [1.0, 0.5]}
+- {id: syn101, source: i101, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn102, source: i102, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn103, source: i103, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn104, source: i104, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn105, source: i105, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn106, source: i106, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn107, source: i107, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn108, source: i108, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn109, source: i109, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn110, source: i110, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn111, source: i111, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn112, source: i112, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn113, source: i113, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn114, source: i114, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn115, source: i115, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn116, source: i116, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn117, source: i117, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn118, source: i118, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn119, source: i119, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn120, source: i120, delay: 1e-3, target: seg1, weight: 1.0} # [1.0, 0.5]
+- {id: syn201, source: i201, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn202, source: i202, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn203, source: i203, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn204, source: i204, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn205, source: i205, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn206, source: i206, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn207, source: i207, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn208, source: i208, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn209, source: i209, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn210, source: i210, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn211, source: i211, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn212, source: i212, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn213, source: i213, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn214, source: i214, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn215, source: i215, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn216, source: i216, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn217, source: i217, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn218, source: i218, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn219, source: i219, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn220, source: i220, delay: 1e-3, target: seg2, weight: 1.0} # [1.0, 0.5]
+- {id: syn301, source: i301, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn302, source: i302, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn303, source: i303, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn304, source: i304, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn305, source: i305, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn306, source: i306, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn307, source: i307, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn308, source: i308, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn309, source: i309, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn310, source: i310, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn311, source: i311, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn312, source: i312, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn313, source: i313, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn314, source: i314, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn315, source: i315, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn316, source: i316, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn317, source: i317, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn318, source: i318, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn319, source: i319, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
+- {id: syn320, source: i320, delay: 1e-3, target: n, weight:    1.0} # [1.0, 0.5]
