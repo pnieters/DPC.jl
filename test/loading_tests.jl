@@ -160,7 +160,6 @@ end
 
     @testset "Saving tests" begin
         tmp_str = save_network(net)
-        println(tmp_str)
         (net2,obj2) = @test_logs  load_network(YAML_source=tmp_str, weight_type=BernoulliSynapseWeight{Float64})
         @test all(pairs(obj2)) do (key,value)
             key ∈ keys(obj)

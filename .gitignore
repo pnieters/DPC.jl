@@ -4,6 +4,6 @@
 deps/deps.jl
 data/*
 .data/*
-examples/rate_coding/data/*
 *.h5
 Manifest.toml
+.vscode/settings.json

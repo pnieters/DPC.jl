@@ -8,4 +8,8 @@ using ADSP, Test
     @testset "Functionality tests" begin
         include("running_tests.jl")
     end
+
+    @testset "Other utility functions tests" begin
+        include("utils_tests.jl")
+    end
 end

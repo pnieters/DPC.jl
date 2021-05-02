@@ -4,7 +4,21 @@ export simulate!, Event, is_superthreshold
 
 
 ##############################
+"""simulate!(net, inputs, tstop=Inf; logger! = Logger(net), show_progress=true, reset=true, handle! = handle!)
 
+Simulates a `Network` object `net` for all the input events in `inputs` up to maximum time `tstop` (defaults to `Inf`).
+
+All events are handled through the `handle!` function (should be callable as `handle!(event, event_queue!, logger!)`).
+Here, `event_queue` is a `BinaryMinHeap` with eltype is given by `inputs`.
+
+An additional `logger!` (should be callable as `logger!(current_time, event_name, target_object_name, target_state)`) 
+can be specified to  log all state transitions.
+
+With `show_progress=false`, no progress-bar will be displayed during simultion.
+
+With `reset=false`, the network state will not be reset before simulation (useful for iterative simulations).
+
+"""
 function simulate!(net, inputs::Vector{<:Event{T}}, tstop=Inf; logger! = Logger(net), show_progress=true, reset=true, handle! = handle!) where {T}
     inputs = convert(Vector{Event{T}}, inputs)
     event_queue = BinaryMinHeap(inputs)

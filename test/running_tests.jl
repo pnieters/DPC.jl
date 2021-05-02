@@ -1,6 +1,3 @@
-#ENV["JULIA_DEBUG"] = "ADSP"
-using ADSP, Test
-
 @testset "Test delay & refractoriness" begin
     config = """
     spike_duration: 4.99

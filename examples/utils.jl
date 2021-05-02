@@ -1,31 +1,133 @@
+using ADSP
 using AbstractPlotting
+import ColorTypes: RGB
+import DataStructures: DefaultDict, OrderedDict
+CairoMakie.activate!()
 
-@recipe(Steps, t, y) do scene
-    Theme(
-        color = :black,
-        fill = nothing,
-    )
+
+function make_manual_ticks(manual_ticks, manual_labels)
+    @assert length(manual_ticks) == length(manual_labels)
+    idx = sortperm(manual_ticks)
+    t = copy(manual_ticks)
+    l = copy(manual_labels)
+    t[idx], x->l[idx]
 end
 
-function AbstractPlotting.plot!(myplot::Steps)
-    t = myplot[1]
-    y = myplot[2]
 
-    line = Node(Point2f0[])
-    function update!(t, y)
-        empty!(line[])
-        y_old = y[1]
-        for (_t,_y) in zip(t,y)
-            push!(line[], Point2f0(_t,y_old))
-            push!(line[], Point2f0(_t,_y))
-            y_old = _y
+pal = AbstractPlotting.Palette(:Dark2)
+
+mytheme = Theme(
+    fontsize = 18,
+    font = "Linux Libertine O",
+    Axis = (
+        backgroundcolor = :gray90,
+        leftspinevisible = false,
+        rightspinevisible = false,
+        bottomspinevisible = false,
+        topspinevisible = false,
+        xgridcolor = :white,
+        ygridcolor = :white,
+        xminorgridcolor = :white,
+        yminorgridcolor = :white,
+        titlesize = 20,
+        xticklabelsize = 16,
+        yticklabelsize = 16,
+        xlabelsize = 18,
+        ylabelsize = 18,
+        xlabelpadding = 5f0,
+        ylabelpadding = 5f0,
+        xticklabelcolor = :gray10,
+        yticklabelcolor = :gray10,
+        xtickcolor = :gray10,
+        ytickcolor = :gray10,
+    )
+)
+
+set_theme!(mytheme)
+
+presentation_theme = copy(mytheme)
+presentation_theme[:Axis][:titlesize][] = 28
+presentation_theme[:Axis][:xticklabelsize][] = 24
+presentation_theme[:Axis][:yticklabelsize][] = 24
+presentation_theme[:Axis][:xlabelsize][] = 26
+presentation_theme[:Axis][:ylabelsize][] = 26
+presentation_theme[:fontsize][] = 26
+
+
+color_1 = pal.colors[1]
+color_1_50 = RGBAf0(color_1.r,color_1.g,color_1.b,0.5)
+color_1_25 = RGBAf0(color_1.r,color_1.g,color_1.b,0.25)
+color_2 = pal.colors[2]
+color_2_50 = RGBAf0(color_2.r,color_2.g,color_2.b,0.5)
+color_2_25 = RGBAf0(color_2.r,color_2.g,color_2.b,0.25)
+color_3 = pal.colors[3]
+color_3_50 = RGBAf0(color_3.r,color_3.g,color_3.b,0.5)
+color_3_25 = RGBAf0(color_3.r,color_3.g,color_3.b,0.25)
+color_4 = pal.colors[4]
+color_4_50 = RGBAf0(color_4.r,color_4.g,color_4.b,0.5)
+color_4_25 = RGBAf0(color_4.r,color_4.g,color_4.b,0.25)
+
+"""
+Computes diameters for branches to satisfy Rall's condition.
+"""
+function get_branch_diameters(tree::NeuronOrSegment{ID,T,WT,IT}; root_diam=1.0, diams=Dict{ID,Float64}()) where {ID,T,WT,IT}
+    diams[tree.id] = root_diam
+    child_diam = (root_diam^(3/2)/length(tree.next_upstream))^(2/3)
+    for child in tree.next_upstream
+        get_branch_diameters(child; root_diam=child_diam, diams=diams)
+    end
+    return diams
+end
+
+
+
+"""
+Computes the depths in segments from the soma for each segment.
+"""
+function get_root_distances(tree::NeuronOrSegment{ID,T,WT,IT}; start=0, dists = OrderedDict{ID,Int}()) where {ID,T,WT,IT}
+    dists[tree.id] = start
+    for child in tree.next_upstream
+        get_root_distances(child; start=start+1, dists=dists)
+    end
+    return dists
+end
+
+
+"""P_superthreshold(threshold, event_probabilities, event_weights)
+
+Compute the probability with which a sum of events with given `event_weights` and `event_probabilities` 
+would exceed a given `threshold`.
+"""
+function P_superthreshold(threshold, event_probabilities, event_weights)
+    @assert length(event_probabilities) == length(event_weights)
+    if isempty(event_probabilities)
+        return threshold ≤ 0 ? 1.0 : 0.0
+    end
+    
+    d = zeros(Bool, length(event_weights))
+    P = zero(Float64)
+    for i in 1:2^length(event_weights)
+        digits!(d, i, base=2)
+        if event_weights'*d ≥ threshold
+            p = prod(ifelse.(d, event_probabilities, one(Float64) .- event_probabilities))
+            P += p 
         end
     end
+    P
+end
 
-    AbstractPlotting.Observables.onany(update!, t, y)
-    update!(t[],y[])
+"""P_fire(obj, volleys)
 
-    poly!(myplot, line, color=myplot[:fill])
-    lines!(myplot, line, color=myplot[:color])
-    myplot
+Compute the probability with which the `volleys` (provided they occur in the correct temporal sequence) 
+would trigger a spike/plateau in `obj`
+"""
+function P_fire(obj, volleys)
+    (probabilities, weights) = get(volleys, obj.id, ([],[]))
+    P_syn = P_superthreshold(obj.θ_syn, probabilities, weights)
+    return if isempty(obj.next_upstream) 
+        P_syn
+    else
+        P_seg = P_superthreshold(obj.θ_seg, P_fire.(obj.next_upstream, Ref(volleys)), ones(length(obj.next_upstream)))
+        P_syn*P_seg
+    end
 end
