@@ -3,7 +3,7 @@ using ADSP, CairoMakie
 include("utils.jl")
 
 
-fig = Figure(resolution = (800, 550))
+fig = Figure(resolution = (800, 500))
 ## First setup: without inhibition
 
 config1 = """
