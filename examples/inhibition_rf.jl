@@ -3,7 +3,7 @@ using ADSP, CairoMakie
 include("utils.jl")
 
 
-fig = Figure(resolution = (800, 600))
+fig = Figure(resolution = (800, 550))
 ## First setup: without inhibition
 
 config1 = """
@@ -89,7 +89,10 @@ plateau2_starts = filter(x->(x.object == :seg2 && x.event == :plateau_starts), l
 plateau1_ends = filter(x->(x.object == :seg1 && x.event == :plateau_ends), logger.data).t
 plateau2_ends = filter(x->(x.object == :seg2 && x.event == :plateau_ends), logger.data).t
 spike_times = filter(x->(x.object == :n && x.event == :spikes), logger.data).t
-xticks,xtickformat = make_manual_ticks([0;250;500;plateau1_starts;plateau2_starts;spike_times], ["0ms";"250ms";"500ms";fill("t₀",length(plateau1_starts));fill("t₁",length(plateau2_starts));fill("t₂",length(spike_times))])
+
+
+## Plot
+xticks,xtickformat = make_manual_ticks([0;250;500;spike_times], ["0ms";"250ms";"500ms";["t"*['₁','₂','₃','₄','₅'][i] for i in 1:length(spike_times)]])
 yticks,ytickformat = make_manual_ticks(0.5:14.5, reverse!(["$(grp)$(sub)" for grp in ["A","B","C"] for sub in ['₁','₂','₃','₄','₅']]))
 
 ax11 = fig[1, 1] = Axis(fig, title = "Without inhibition", 
@@ -101,7 +104,7 @@ ax11 = fig[1, 1] = Axis(fig, title = "Without inhibition",
     yticklabelsize=14
     )
 ax12 = fig[1, 2] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
-
+hidexdecorations!(ax11, grid=false)
 
 for (i, syn) in enumerate([syn11,syn12,syn13,syn14,syn15])
     steps!(ax11, [0;syn.t;150], 9 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_1, color=:transparent)
@@ -120,14 +123,14 @@ end
 # steps!(ax11, [0;seg1.t;900], 1 .+ 0.45 .* [0;Int.(seg1.state);0], fill=color_1_50)
 
 
-lines!.(ax11, Rect.(plateau1_starts .- 5.5, 9.95, 11, 5.1), color=:gray10, linewidth=2)
-lines!.(ax11, Rect.(plateau2_starts .- 5.5, 4.95, 11, 5.1), color=:gray10, linewidth=2)
+# lines!.(ax11, Rect.(plateau1_starts .- 5.5, 9.95, 11, 5.1), color=:gray10, linewidth=2)
+# lines!.(ax11, Rect.(plateau2_starts .- 5.5, 4.95, 11, 5.1), color=:gray10, linewidth=2)
 lines!.(ax11, Rect.(spike_times .- 5.5, -0.05, 11, 5.1), color=:gray10, linewidth=2)
 
 # arrows!(ax11, Point2f0[(spike_times[]-5.5,2.5)], Point2f0[(-59.5,0)], linewidth=2, arrowsize = 20, linecolor=:gray10, arrowcolor=:gray10)
 # arrows!(ax11, Point2f0[(spike_times[]+5.5,2.5)], Point2f0[(59.5,0)], linewidth=2, arrowsize = -20, linecolor=:gray10, arrowcolor=:gray10)
 
-linesegments!(ax11, repeat(spike_times, inner=2), repeat([-0.5,15.5], outer=length(spike_times)), linewidth=3, linestyle=:dash, color=:gray10)
+# linesegments!(ax11, repeat(spike_times, inner=2), repeat([-0.5,15.5], outer=length(spike_times)), linewidth=3, linestyle=:dash, color=:gray10)
 ylims!(ax11, (-0.5,15.5))
 
 pn1 = plot!(ax12, objects1[:n], ports=Dict(:n=>[:C],:seg2=>[:dummy, :B],:seg1=>[:dummy, :A]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_3, :seg1=>color_1, :seg2=>color_2))
@@ -136,7 +139,7 @@ hidedecorations!(ax12)
 ports = Dict(pn1.attributes[:ports][])
 arrows!(ax12, [ports[x] - Point2f0(0.4, 0) for x in [:C,:B,:A]] , fill(Point2f0(0.3,0),3), linewidth=2, arrowsize = 20)
 for (label,pos)  in zip(["C","B","A"], [ports[x] - Point2f0(0.45, 0) for x in [:C,:B,:A]])
-    text!(ax12, label, position=pos, align=(:right, :center), textsize=0.25, color=:black)
+    text!(ax12, label, position=pos, align=(:right, :center), textsize=20, color=:black)
 end
 
 fig
@@ -247,9 +250,9 @@ plateau2_starts = filter(x->(x.object == :seg2 && x.event == :plateau_starts), l
 plateau1_ends = filter(x->(x.object == :seg1 && x.event == :plateau_ends), logger.data).t
 plateau2_ends = filter(x->(x.object == :seg2 && x.event == :plateau_ends), logger.data).t
 spike_times = filter(x->(x.object == :n && x.event == :spikes), logger.data).t
-xticks,xtickformat = make_manual_ticks([0;250;500;plateau1_starts;plateau2_starts;spike_times], ["0ms";"250ms";"500ms";fill("t₀",length(plateau1_starts));fill("t₁",length(plateau2_starts));fill("t₂",length(spike_times))])
-yticks,ytickformat = make_manual_ticks(0.5:14.5, reverse!(["$(grp)$(sub)" for grp in ["A","B","C"] for sub in ['₁','₂','₃','₄','₅']]))
 
+
+## Plot
 ax21 = fig[2, 1] = Axis(fig, title = "With inhibition", 
     height=Fixed(180),
     xticks=xticks, 
@@ -258,6 +261,7 @@ ax21 = fig[2, 1] = Axis(fig, title = "With inhibition",
     ytickformat=ytickformat, 
     yticklabelsize=14
     )
+linkaxes!(ax11, ax21)
 ax22 = fig[2, 2] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
 
 
@@ -278,14 +282,14 @@ end
 # steps!(ax21, [0;seg1.t;900], 1 .+ 0.45 .* [0;Int.(seg1.state);0], fill=color_1_50)
 
 
-lines!.(ax21, Rect.(plateau1_starts .- 5.5, 9.95, 11, 5.1), color=:gray10, linewidth=2)
-lines!.(ax21, Rect.(plateau2_starts .- 5.5, 4.95, 11, 5.1), color=:gray10, linewidth=2)
+# lines!.(ax21, Rect.(plateau1_starts .- 5.5, 9.95, 11, 5.1), color=:gray10, linewidth=2)
+# lines!.(ax21, Rect.(plateau2_starts .- 5.5, 4.95, 11, 5.1), color=:gray10, linewidth=2)
 lines!.(ax21, Rect.(spike_times .- 5.5, -0.05, 11, 5.1), color=:gray10, linewidth=2)
 
 # arrows!(ax21, Point2f0[(spike_times[]-5.5,2.5)], Point2f0[(-59.5,0)], linewidth=2, arrowsize = 20, linecolor=:gray10, arrowcolor=:gray10)
 # arrows!(ax21, Point2f0[(spike_times[]+5.5,2.5)], Point2f0[(59.5,0)], linewidth=2, arrowsize = -20, linecolor=:gray10, arrowcolor=:gray10)
 
-linesegments!(ax21, repeat(spike_times, inner=2), repeat([-0.5,15.5], outer=length(spike_times)), linewidth=3, linestyle=:dash, color=:gray10)
+# linesegments!(ax21, repeat(spike_times, inner=2), repeat([-0.5,15.5], outer=length(spike_times)), linewidth=3, linestyle=:dash, color=:gray10)
 ylims!(ax21, (-0.5,15.5))
 
 pn2 = plot!(ax22, objects2[:n], ports=Dict(:n=>[:C],:seg2=>[:dummy, :B, :nC2],:seg1=>[:dummy, :A, :nC1]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_3, :seg1=>color_1, :seg2=>color_2))
@@ -295,12 +299,14 @@ ports = Dict(pn2.attributes[:ports][])
 arrows!(ax22, [ports[x] - Point2f0(0.4, 0) for x in [:C,:B,:A]] , fill(Point2f0(0.3,0),3), linewidth=2, arrowsize = 20)
 arrows!(ax22, [ports[x] + Point2f0(0.4, 0) for x in [:nC2,:nC1]] , fill(Point2f0(-0.3,0),2), linewidth=2, arrowsize = -20)
 for (label,pos)  in zip(["C","B","A"], [ports[x] - Point2f0(0.45, 0) for x in [:C,:B,:A]])
-    text!(ax22, label, position=pos, align=(:right, :center), textsize=0.25, color=:black)
+    text!(ax22, label, position=pos, align=(:right, :center), textsize=20, color=:black)
 end
 for (label,pos)  in zip(["-C","-C"], [ports[x] + Point2f0(0.45, 0) for x in [:nC2,:nC1]])
-    text!(ax22, label, position=pos, align=(:left, :center), textsize=0.25, color=:black)
+    text!(ax22, label, position=pos, align=(:left, :center), textsize=20, color=:black)
 end
 
+xlims!(ax12, (-1,1))
+xlims!(ax22, (-1,1))
 fig
 
 ## Save
