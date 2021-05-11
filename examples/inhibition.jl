@@ -3,7 +3,34 @@ using ADSP, CairoMakie
 include("utils.jl")
 
 
-fig = Figure(resolution = (800, 500))
+fig = Figure(resolution = (0.75textwidth, 0.75textwidth))
+
+volleys = [
+    (70.0, :i1), (120.0, :i2), (170.0, :i3),
+    (315.0, :i3), (325.0, :i2), (335.0, :i1), 
+    (370.0, :i3), (380.0, :i2), (390.0, :i1), 
+    (425.0, :i3), (435.0, :i2), (445.0, :i1) 
+]
+
+ax0 = fig[1, 1] = Axis(fig; 
+    titlealign=:left, title = "a.    Volleys of spikes from population A, B and C"
+)
+
+for (t,pop) in  volleys
+    (name,y) = if pop == :i1 
+        "A",3
+    elseif pop==:i2 
+        "B",2
+    else 
+        "C",1
+    end
+    text!(ax0, name, position=Point2f0(t, y), align=(:center, :center), textsize=14, color=:black)
+end
+hideydecorations!(ax0)
+hidexdecorations!(ax0, grid=false)
+ylims!(ax0, 0.25, 3.75)
+fig
+
 ## First setup: without inhibition
 
 config1 = """
@@ -55,12 +82,6 @@ synapses:
 
 (net1,objects1) = load_network(YAML_source=config1)
 
-volleys = [
-    (70.0, :i1), (120.0, :i2), (170.0, :i3),
-    (315.0, :i3), (325.0, :i2), (335.0, :i1), 
-    (370.0, :i3), (380.0, :i2), (390.0, :i1), 
-    (425.0, :i3), (435.0, :i2), (445.0, :i1) 
-]
 input=[ Event(:input_spikes, 0.0, t+τ-0.5, objects1[Symbol("$(pop)$(i)")]) for (t, pop) in volleys for (i,τ) in enumerate(5*rand(5))]
 
 logger=simulate!(net1, input)
@@ -95,15 +116,14 @@ spike_times = filter(x->(x.object == :n && x.event == :spikes), logger.data).t
 xticks,xtickformat = make_manual_ticks([0;250;500;spike_times], ["0ms";"250ms";"500ms";["t"*['₁','₂','₃','₄','₅'][i] for i in 1:length(spike_times)]])
 yticks,ytickformat = make_manual_ticks(0.5:14.5, reverse!(["$(grp)$(sub)" for grp in ["A","B","C"] for sub in ['₁','₂','₃','₄','₅']]))
 
-ax11 = fig[1, 1] = Axis(fig, title = "Without inhibition", 
-    height=Fixed(180),
-    xticks=xticks, 
-    xtickformat=xtickformat, 
-    yticks=yticks, 
-    ytickformat=ytickformat, 
-    yticklabelsize=14
-    )
-ax12 = fig[1, 2] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
+ax11 = fig[2, 1] = Axis(fig; 
+    yticks=(2.5:5:15, ["C","B","A"]), 
+    yminorticks=AbstractPlotting.IntervalsBetween(5, true),
+    yminorticksvisible = true, yminorgridvisible = true, 
+    titlealign=:left, title = "b.    Without inhibition"
+)
+
+ax12 = fig[2, 2] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
 hidexdecorations!(ax11, grid=false)
 
 for (i, syn) in enumerate([syn11,syn12,syn13,syn14,syn15])
@@ -119,27 +139,17 @@ steps!(ax11, [0;seg2.t;150], 5 .+ 5 .* ([0;Int.(seg2.state);0].>1), fill=color_2
 for (i, syn) in enumerate([syn31,syn32,syn33,syn34,syn35])
     steps!(ax11, [0;syn.t;150], -1 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_3, color=:transparent)
 end
-# steps!(ax11, [0;n.t;900], 0 .+ 2.45 .* [0;Int.(n.state);0], fill=color_3_50)
-# steps!(ax11, [0;seg1.t;900], 1 .+ 0.45 .* [0;Int.(seg1.state);0], fill=color_1_50)
-
-
-# lines!.(ax11, Rect.(plateau1_starts .- 5.5, 9.95, 11, 5.1), color=:gray10, linewidth=2)
-# lines!.(ax11, Rect.(plateau2_starts .- 5.5, 4.95, 11, 5.1), color=:gray10, linewidth=2)
 lines!.(ax11, Rect.(spike_times .- 5.5, -0.05, 11, 5.1), color=:gray10, linewidth=2)
 
-# arrows!(ax11, Point2f0[(spike_times[]-5.5,2.5)], Point2f0[(-59.5,0)], linewidth=2, arrowsize = 20, linecolor=:gray10, arrowcolor=:gray10)
-# arrows!(ax11, Point2f0[(spike_times[]+5.5,2.5)], Point2f0[(59.5,0)], linewidth=2, arrowsize = -20, linecolor=:gray10, arrowcolor=:gray10)
-
-# linesegments!(ax11, repeat(spike_times, inner=2), repeat([-0.5,15.5], outer=length(spike_times)), linewidth=3, linestyle=:dash, color=:gray10)
 ylims!(ax11, (-0.5,15.5))
 
 pn1 = plot!(ax12, objects1[:n], ports=Dict(:n=>[:C],:seg2=>[:dummy, :B],:seg1=>[:dummy, :A]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_3, :seg1=>color_1, :seg2=>color_2))
 hidedecorations!(ax12)
 
 ports = Dict(pn1.attributes[:ports][])
-arrows!(ax12, [ports[x] - Point2f0(0.4, 0) for x in [:C,:B,:A]] , fill(Point2f0(0.3,0),3), linewidth=2, arrowsize = 20)
+arrows!(ax12, [ports[x] - Point2f0(0.4, 0) for x in [:C,:B,:A]] , fill(Point2f0(0.3,0),3), linewidth=2, arrowsize = 10)
 for (label,pos)  in zip(["C","B","A"], [ports[x] - Point2f0(0.45, 0) for x in [:C,:B,:A]])
-    text!(ax12, label, position=pos, align=(:right, :center), textsize=20, color=:black)
+    text!(ax12, label, position=pos, align=(:right, :center), textsize=14, color=:black)
 end
 
 fig
@@ -197,11 +207,6 @@ synapses:
 - {id: syn43, source: i33, target: seg1, weight: -1, delay: 10.1}
 - {id: syn44, source: i34, target: seg1, weight: -1, delay: 10.1}
 - {id: syn45, source: i35, target: seg1, weight: -1, delay: 10.1}
-- {id: syn51, source: i31, target: seg2, weight: -1, delay: 10.1}
-- {id: syn52, source: i32, target: seg2, weight: -1, delay: 10.1}
-- {id: syn53, source: i33, target: seg2, weight: -1, delay: 10.1}
-- {id: syn54, source: i34, target: seg2, weight: -1, delay: 10.1}
-- {id: syn55, source: i35, target: seg2, weight: -1, delay: 10.1}
 """
 
 (net2,objects2) = load_network(YAML_source=config2)
@@ -253,16 +258,14 @@ spike_times = filter(x->(x.object == :n && x.event == :spikes), logger.data).t
 
 
 ## Plot
-ax21 = fig[2, 1] = Axis(fig, title = "With inhibition", 
-    height=Fixed(180),
-    xticks=xticks, 
-    xtickformat=xtickformat, 
-    yticks=yticks, 
-    ytickformat=ytickformat, 
-    yticklabelsize=14
-    )
-linkaxes!(ax11, ax21)
-ax22 = fig[2, 2] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
+ax21 = fig[3, 1] = Axis(fig; 
+    yticks=(2.5:5:15, ["C","B","A"]), 
+    yminorticks=AbstractPlotting.IntervalsBetween(5, true),
+    yminorticksvisible = true, yminorgridvisible = true, 
+    titlealign=:left, title = "c.    With inhibition",
+    xlabel="time [ms]"
+)
+ax22 = fig[3, 2] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
 
 
 for (i, syn) in enumerate([syn11,syn12,syn13,syn14,syn15])
@@ -292,28 +295,31 @@ lines!.(ax21, Rect.(spike_times .- 5.5, -0.05, 11, 5.1), color=:gray10, linewidt
 # linesegments!(ax21, repeat(spike_times, inner=2), repeat([-0.5,15.5], outer=length(spike_times)), linewidth=3, linestyle=:dash, color=:gray10)
 ylims!(ax21, (-0.5,15.5))
 
-pn2 = plot!(ax22, objects2[:n], ports=Dict(:n=>[:C],:seg2=>[:dummy, :B, :nC2],:seg1=>[:dummy, :A, :nC1]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_3, :seg1=>color_1, :seg2=>color_2))
+pn2 = plot!(ax22, objects2[:n], ports=Dict(:n=>[:C],:seg2=>[:dummy, :B],:seg1=>[:dummy, :A, :nC1]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_3, :seg1=>color_1, :seg2=>color_2))
 hidedecorations!(ax22)
 
 ports = Dict(pn2.attributes[:ports][])
-arrows!(ax22, [ports[x] - Point2f0(0.4, 0) for x in [:C,:B,:A]] , fill(Point2f0(0.3,0),3), linewidth=2, arrowsize = 20)
-arrows!(ax22, [ports[x] + Point2f0(0.4, 0) for x in [:nC2,:nC1]] , fill(Point2f0(-0.3,0),2), linewidth=2, arrowsize = -20)
+arrows!(ax22, [ports[x] - Point2f0(0.4, 0) for x in [:C,:B,:A]] , fill(Point2f0(0.3,0),3), linewidth=2, arrowsize = 10)
 for (label,pos)  in zip(["C","B","A"], [ports[x] - Point2f0(0.45, 0) for x in [:C,:B,:A]])
-    text!(ax22, label, position=pos, align=(:right, :center), textsize=20, color=:black)
-end
-for (label,pos)  in zip(["-C","-C"], [ports[x] + Point2f0(0.45, 0) for x in [:nC2,:nC1]])
-    text!(ax22, label, position=pos, align=(:left, :center), textsize=20, color=:black)
+    text!(ax22, label, position=pos, align=(:right, :center), textsize=14, color=:black)
 end
 
+arrows!(ax22, [ports[:nC1] + Point2f0(0.35, 0)] , [Point2f0(-0.3,0)], linewidth=2, arrowsize = -10)
+text!(ax22, "¬C", position=ports[:nC1]+Point2f0(0.4,0), align=(:left, :center), textsize=14, color=:black)
+
+    
 xlims!(ax12, (-1,1))
 xlims!(ax22, (-1,1))
+linkxaxes!(ax0,ax11)
+linkaxes!(ax11, ax21)
 fig
 
 ## Save
-colsize!(fig.layout, 2, Fixed(150))
+colsize!(fig.layout, 2, Relative(0.2))
+rowsize!(fig.layout, 1, Relative(0.15))
 
-save(joinpath("figures","inhibition_rf.pdf"), fig)
-save(joinpath("figures","inhibition_rf.svg"), fig)
-save(joinpath("figures","inhibition_rf.png"), fig)
+save(joinpath("figures","inhibition.pdf"), fig)
+save(joinpath("figures","inhibition.svg"), fig)
+save(joinpath("figures","inhibition.png"), fig)
 fig
 ################################################################################

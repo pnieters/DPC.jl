@@ -5,6 +5,8 @@ import DataStructures: DefaultDict, OrderedDict
 CairoMakie.activate!()
 
 
+const textwidth = 469.75499 / 0.75
+
 function make_manual_ticks(manual_ticks, manual_labels)
     @assert length(manual_ticks) == length(manual_labels)
     idx = sortperm(manual_ticks)
@@ -17,7 +19,7 @@ end
 pal = AbstractPlotting.Palette(:Dark2)
 
 mytheme = Theme(
-    fontsize = 18,
+    fontsize = 12,
     font = "Linux Libertine O",
     Axis = (
         backgroundcolor = :gray90,
@@ -29,11 +31,11 @@ mytheme = Theme(
         ygridcolor = :white,
         xminorgridcolor = :white,
         yminorgridcolor = :white,
-        titlesize = 20,
-        xticklabelsize = 16,
-        yticklabelsize = 16,
-        xlabelsize = 18,
-        ylabelsize = 18,
+        titlesize = 14,
+        xticklabelsize = 10,
+        yticklabelsize = 10,
+        xlabelsize = 12,
+        ylabelsize = 12,
         xlabelpadding = 5f0,
         ylabelpadding = 5f0,
         xticklabelcolor = :gray10,

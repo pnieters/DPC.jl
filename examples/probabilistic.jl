@@ -62,13 +62,22 @@ firing_probabilities2 = [(prob_A .= a; prob_B .= b; P_fire(objects2[:C], volleys
 
 ## Plotting
 
-fig = Figure(resolution=(800,700))
-ax1a = fig[1,1] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
-ax2a = fig[1,2] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
-ax3a = fig[1,3] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
-ax1b = fig[2,1] = Axis(fig, title="single\nsegment", xlabel="P₀", ylabel="Plateau probability")#, aspect=DataAspect()
-ax2b = fig[2,2] = Axis(fig, xlabel="P₁", ylabel="P₂", title="sequential\nsegments")
-ax3b = fig[2,3] = Axis(fig, xlabel="P₁", ylabel="P₂", title="parallel\nsegments")
+fig = Figure(resolution=(0.75textwidth,0.7textwidth))
+ax1a = fig[1,1] = Axis(fig, backgroundcolor=:transparent,
+    title="a.    single\n       segment", titlealign=:left,    
+)
+
+ax2a = fig[1,2] = Axis(fig, backgroundcolor=:transparent,
+    title="b.    sequential\n       segments", titlealign=:left,
+)
+
+ax3a = fig[1,3] = Axis(fig, backgroundcolor=:transparent,
+    title="c.    parallel\n       segments", titlealign=:left,
+)
+
+ax1b = fig[2,1] = Axis(fig, xlabel="P₀", ylabel="Detection probability")#, aspect=DataAspect()
+ax2b = fig[2,2] = Axis(fig, xlabel="P₁", ylabel="P₂", )
+ax3b = fig[2,3] = Axis(fig, xlabel="P₁", ylabel="P₂", )
 cell_col_1 = fig[3,1]
 cell_col_2 = fig[3,2:3]
 
@@ -76,7 +85,7 @@ colors = cgrad(:viridis,length(firing_probabilities0), categorical=true)
 for (prob,col) in zip(firing_probabilities0, colors)
     lines!(ax1b, probabilities, prob, color=col, linewidth=3)
 end
-ax_col_1 = Colorbar(cell_col_1, height=10, colormap=colors, limits=(0.5,10.5), ticks=1:10, label="Threshold θ₀", vertical=false, flipaxis = false)
+ax_col_1 = Colorbar(cell_col_1, height=10, colormap=colors, limits=(0.5,10.5), ticks=1:10, label="TS", vertical=false, flipaxis = false)
 
 contourf!(ax2b, probabilities, probabilities, firing_probabilities1, colormap=:viridis, colorrange=(0,1))
 
@@ -84,23 +93,23 @@ contourf!(ax3b, probabilities, probabilities, firing_probabilities2, colormap=:v
 
 p_n=plot!(ax3a, objects2[:C], ports=Dict(:C=>[],:A=>[:A],:B=>[:B]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>RGBAf0(0.5,0.5,0.5,0.5), :A=>color_1, :B=>color_2))
 ports = lift(x->last.(x) .- Point2f0[(-0.4,0),(0.4,0)], p_n.attributes[:ports])
-arrows!(ax3a, ports , Node([Point2f0(-0.3,0),Point2f0(0.3,0)]), linewidth=2, arrowsize = [-20,20])
-text!.(ax3a, "P₁", position=(@lift $ports[1]), align=(:right, :bottom), textsize=0.25, color=:black)
-text!.(ax3a, "P₂", position=(@lift $ports[2]), align=(:left, :bottom), textsize=0.25, color=:black)
+arrows!(ax3a, ports , Node([Point2f0(-0.3,0),Point2f0(0.3,0)]), linewidth=2, arrowsize = [-10,10])
+text!.(ax3a, "P₁", position=(@lift $ports[1]), align=(:right, :bottom), textsize=14, color=:black)
+text!.(ax3a, "P₂", position=(@lift $ports[2]), align=(:left, :bottom), textsize=14, color=:black)
 
 p_n=plot!(ax2a, objects1[:C], ports=Dict(:C=>[],:A=>[:A],:B=>[:B]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>RGBAf0(0.5,0.5,0.5,0.5), :A=>color_1, :B=>color_2))
 ports = lift(x->last.(x) .- Point2f0[(-0.4,0),(0.4,0)], p_n.attributes[:ports])
-arrows!(ax2a, ports , Node([Point2f0(-0.3,0),Point2f0(0.3,0)]), linewidth=2, arrowsize = [-20,20])
-text!.(ax2a, "P₁", position=(@lift $ports[1]), align=(:right, :bottom), textsize=0.25, color=:black)
-text!.(ax2a, "P₂", position=(@lift $ports[2]), align=(:left, :bottom), textsize=0.25, color=:black)
+arrows!(ax2a, ports , Node([Point2f0(-0.3,0),Point2f0(0.3,0)]), linewidth=2, arrowsize = [-10,10])
+text!.(ax2a, "P₁", position=(@lift $ports[1]), align=(:right, :bottom), textsize=14, color=:black)
+text!.(ax2a, "P₂", position=(@lift $ports[2]), align=(:left, :bottom), textsize=14, color=:black)
 
 p_n=plot!(ax1a, objects0[:C], ports=Dict(:C=>[:C],:A=>[:A]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>RGBAf0(0.5,0.5,0.5,0.5), :A=>color_1, :B=>color_2))
 port = lift(x->[x[1][2] - Point2f0(-0.4,0)], p_n.attributes[:ports])
-arrows!(ax1a, port , [Point2f0(-0.3,0)], linewidth=2, arrowsize = -20)
-text!.(ax1a, "P₀", position=(@lift $ports[1]), align=(:right, :bottom), textsize=0.25, color=:black)
+arrows!(ax1a, port , [Point2f0(-0.3,0)], linewidth=2, arrowsize = -10)
+text!.(ax1a, "P₀", position=(@lift $ports[1]), align=(:right, :bottom), textsize=14, color=:black)
 
 
-ax_col_2 = Colorbar(cell_col_2, height=10, colormap=:viridis, limits=(0,1), label="Plateau probability for θ₁=θ₂=5", vertical=false, flipaxis = false)
+ax_col_2 = Colorbar(cell_col_2, height=10, colormap=:viridis, limits=(0,1), label="Detection probability for TS=5", vertical=false, flipaxis = false)
 
 hidedecorations!(ax3a)
 hidespines!(ax3a)
@@ -110,27 +119,24 @@ hidedecorations!(ax1a)
 hidespines!(ax1a)
 
 hideydecorations!(ax3b)
-ax2b.xticks = [0,0.5,1.0]
-ax3b.xticks=[0,0.5,1.0]
-ax2b.yticks=[0,0.5,1.0]
-rowsize!(fig.layout, 2, Aspect(3,1)) 
 colgap!(fig.layout, 1, Fixed(45)) 
 colgap!(fig.layout, 2, Fixed(45)) 
+rowsize!(fig.layout, 1, Aspect(1, 1.5))
+rowsize!(fig.layout, 2, Aspect(1,1)) 
 
-ax1b.xticks = [0,0.5,1.0]
-ax1b.yticks = [0,0.5,1.0]
-ax2b.xticks = [0,0.5,1.0]
-ax2b.yticks = [0,0.5,1.0]
-ax3b.xticks = [0,0.5,1.0]
-ax3b.yticks = [0,0.5,1.0]
+ylims!(ax1a, -0.25,2.25)
+ylims!(ax2a, -0.25,2.25)
+ylims!(ax3a, -0.25,2.25)
+xlims!(ax1a, -0.8333,0.8333)
+xlims!(ax2a, -0.8333,0.8333)
+xlims!(ax3a, -0.8333,0.8333)
 
-ylims!(ax1a, [-0.25,2.25])
-ylims!(ax2a, [-0.25,2.25])
-ylims!(ax3a, [-0.25,2.25])
-
-ax1b.limits[] = Rect(0.0f0,0.0f0,1.0f0,1.0f0)
-ax2b.limits[] = Rect(0.0f0,0.0f0,1.0f0,1.0f0)
-ax3b.limits[] = Rect(0.0f0,0.0f0,1.0f0,1.0f0)
+xlims!(ax1b, 0,1)
+xlims!(ax2b, 0,1)
+xlims!(ax3b, 0,1)
+ylims!(ax1b, 0,1)
+ylims!(ax2b, 0,1)
+ylims!(ax3b, 0,1)
 ax2b.yticks[] = [0,0.5,1.0]
 
 
