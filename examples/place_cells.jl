@@ -49,6 +49,8 @@ plateau_extended_1 = filter(x->(x.object==:seg1 && x.event==:plateau_extended), 
 plateau_extended_2 = filter(x->(x.object==:seg2 && x.event==:plateau_extended), special_path.logger.data)
 spike_times = filter(x->(x.object==:n && x.event==:spikes), special_path.logger.data)
 
+fig
+
 ## Vary the speed
 α_opt = 2π/6
 x₀_opt = [cos(α_opt+π)*r+0.5*grid_params.xscale,sin(α_opt+π)*r+0.5*grid_params.yscale]
@@ -57,6 +59,11 @@ vs = LinRange(v_opt/100,10*v_opt,100)
 prob_speed = Vector{Float64}[]
 prob_rotated = Vector{Float64}[]
 prob_offset = Vector{Float64}[]
+αs = LinRange(0,2π,51)[1:end-1]        # movement directions over which to sweep
+offsets = LinRange(-2r,2r,31)
+x₀s_offset = eachrow(x₀_opt' .+ [cos(α_opt+π/2) sin(α_opt+π/2)] .* offsets) # offsets over which to sweep
+
+x₀s_rotated = [[cos(α+π)*r+0.5*grid_params.xscale,sin(α+π)*r+0.5*grid_params.yscale] for α ∈ αs] # path starting points
 for θ ∈ [8,4]
     objects[:n].θ_syn = θ
     objects[:seg1].θ_syn = θ
@@ -77,8 +84,6 @@ for θ ∈ [8,4]
 
 
     ## Vary the orientation
-    αs = LinRange(0,2π,101)[1:end-1]        # movement directions over which to sweep
-    x₀s_rotated = [[cos(α+π)*r+0.5*grid_params.xscale,sin(α+π)*r+0.5*grid_params.yscale] for α ∈ αs] # path starting points
     counts = zeros(Int, length(αs))
     @showprogress 1.0 "Sweeping directions ..." for (i,(α,x₀)) ∈ enumerate(zip(αs, x₀s_rotated))
         path = generate_straight_path(path_trange, α, v_opt, x₀)
@@ -91,12 +96,8 @@ for θ ∈ [8,4]
         end
     end
     push!(prob_rotated, counts ./ trials)
-    # hist_rotated = (hcat(cos.(αs),sin.(αs)) .*r .* prob_rotated) .+ 0.5 .* [grid_params.xscale grid_params.yscale]
-
 
     ## Vary the shift
-    offsets = LinRange(-2r,2r,51)
-    x₀s_offset = eachrow(x₀_opt' .+ [cos(α_opt+π/2) sin(α_opt+π/2)] .* offsets)
     counts = zeros(Int, length(offsets))
     @showprogress 1.0 "Sweeping offsets ..." for (i,x₀) ∈ enumerate(x₀s_offset)
         path = generate_straight_path(path_trange, α_opt, v_opt, x₀)
@@ -109,7 +110,6 @@ for θ ∈ [8,4]
         end
     end
     push!(prob_offset, counts ./ trials)
-    # hist_offset = [cos(α_opt+π/2) sin(α_opt+π/2)].*offsets .+ [cos(α_opt) sin(α_opt)] .* prob_offset .*r .+ 0.5 .* [grid_params.xscale grid_params.yscale]
 end
 
 ## Plotting
@@ -121,25 +121,26 @@ show_spines = (
     :topspinevisible => true
 )
 
-# xticks,xtickformat = make_manual_ticks([0;250;500;plateau1_starts;plateau2_starts;spike_times], ["0ms";"250ms";"500ms";fill("t₀",length(plateau1_starts));fill("t₁",length(plateau2_starts));fill("t₂",length(spike_times))])
 yticks,ytickformat = make_manual_ticks(collect(0:-5:-60), vcat([""],["$(grp)$(sub)" for grp in ["A","B","C"] for sub in ["₅ ", "₁₀","₁₅","₂₀"]]))
 
-fig = Figure(resolution = (800, 800))
-ax11 = fig[1,1] = Axis(fig; title="Effective paths", backgroundcolor=:transparent, xlabel="x coordinate [mm]", ylabel="y coordinate [mm]", 
+fig = Figure(resolution = (0.75textwidth, 0.75textwidth))
+ax11 = fig[1,1] = Axis(fig; title="a.    Effective paths", titlealign=:left, backgroundcolor=:transparent, xlabel="x coordinate [mm]", ylabel="y coordinate [mm]", 
     show_spines...)
 # hidedecorations!(ax11)
 gl = fig[1,2:3] = GridLayout()
 ax12 = gl[1,1] = Axis(fig; 
-    title="Activity for the highlighted path", xlabel="time [ms]", yticks, ytickformat, 
-    yminorticks=AbstractPlotting.IntervalsBetween(4, false), yminorticksvisible = true, yminorgridvisible = true
+    title="b.    Activity for the highlighted path", titlealign=:left, xlabel="time [ms]", 
+    yticks=([-50, -30, -10], ["C","B","A"]), 
+    yminorticks=AbstractPlotting.IntervalsBetween(20, true),
+    yminorticksvisible = true, yminorgridvisible = true, 
 )
 ax13 = gl[1,2] = Axis(fig; aspect=DataAspect(), backgroundcolor=:transparent)
 hidedecorations!(ax13)
-ax21 = fig[2,1] = Axis(fig; title="Optimal path", backgroundcolor=:transparent, ylabel="y coordinate", show_spines...)
+ax21 = fig[2,1] = Axis(fig; title="c.    Optimal path", titlealign=:left, backgroundcolor=:transparent, ylabel="y coordinate", show_spines...)
 hidexdecorations!(ax21)
-ax22 = fig[2,2] = Axis(fig; title="Rotated paths", backgroundcolor=:transparent, show_spines...)
+ax22 = fig[2,2] = Axis(fig; title="d.    Rotated paths", titlealign=:left, backgroundcolor=:transparent, show_spines...)
 hidedecorations!(ax22)
-ax23 = fig[2,3] = Axis(fig; title="Translated paths", backgroundcolor=:transparent, show_spines...)
+ax23 = fig[2,3] = Axis(fig; title="e.    Translated paths", titlealign=:left, backgroundcolor=:transparent, show_spines...)
 hidedecorations!(ax23)
 ax31 = fig[3,1] = Axis(fig, xlabel="run speed [mm/ms]", ylabel="spike probability", )
 ax32 = fig[3,2] = Axis(fig, xlabel="angle [deg]")
@@ -150,7 +151,6 @@ rowsize!(fig.layout, 2, Aspect(1, grid_params.yscale/grid_params.xscale))
 colsize!(gl, 2, Relative(0.1))
 linkaxes!(ax11, ax21)
 linkaxes!(ax11, ax23)
-linkaxes!(ax11, ax24)
 linkyaxes!(ax31, ax32)
 linkyaxes!(ax31, ax33)
 
@@ -195,7 +195,7 @@ plot!(ax13, objects[:n],
 # Plot the optimal path
 path_opt = generate_straight_path(path_trange, α_opt, v_opt, x₀_opt)
 (path_start,path_end) = path_opt.(path_trange)
-arrows!(ax21, 1000 .*(Point2f0[path_start].-Point2f0(domain[2]./2...)), 1000 .*(Point2f0[path_end .- path_start]), linewidth=2, color=:black, arrowsize=0)
+lines!(ax21, 1000 .*([Point2f0[path_start]; Point2f0[path_end]] .- Point2f0(domain[2]./2)), linewidth=2, color=:black)
 
 # Plot the speed-dependent spike probability
 vlines!(ax31, [v_opt], linestyle=:dash, color=:gray, linewidth=2)
@@ -204,18 +204,13 @@ for (prob, linestyle) in zip(prob_speed, (:solid, :dash))
 end
 
 # Plot the rotated paths
-# lines!(ax22, decompose(Point2f0,Circle(Point2f0(grid_params.xscale/2,grid_params.yscale/2), 0.5*r)), color=:gray)
-# lines!(ax22, decompose(Point2f0,Circle(Point2f0(grid_params.xscale/2,grid_params.yscale/2), r)), color=:gray)
-
 for (p,α,x₀) in zip(prob_rotated[1], αs, x₀s_rotated)
     path = generate_straight_path(path_trange, α, v_opt, x₀)
     (path_start,path_end) = path.(path_trange)
-    arrows!(ax22, 1000 .*(Point2f0[path_start].-Point2f0(domain[2]./2...)), 1000 .*(Point2f0[path_end .- path_start]), linewidth=2, linecolor=RGBAf0(0.2,0.2,0.2,p), arrowcolor=RGBAf0(0.2,0.2,0.2,p), arrowsize=0)
+    lines!(ax22, 1000 .*([Point2f0[path_start]; Point2f0[path_end]] .- Point2f0(domain[2]./2)), linewidth=2, color=RGBAf0(0.2,0.2,0.2,p))
 end
 
 # Plot the orientation-dependent spike probability
-# poly!(ax23, Point2f0.(eachrow(hist_rotated)), color=color_4_50)
-# lines!(ax23, Point2f0.(eachrow(hist_rotated)), linewidth=2, color=color_4)
 vlines!(ax32, [α_opt].*180/π, linestyle=:dash, color=:gray, linewidth=2)
 for (prob, linestyle) in zip(prob_rotated, (:solid, :dash))
     lines!(ax32, αs.*180/π, prob; color=color_4, linewidth=2, linestyle)
@@ -224,29 +219,13 @@ end
 
 
 # Plot the offset paths
-# lines!(ax24, 
-#     0.5 .* Point2f0[(grid_params.xscale, grid_params.yscale)].+ Point2f0[(cos(α_opt+π/2), sin(α_opt+π/2)),(-cos(α_opt+π/2), -sin(α_opt+π/2))].*2r
-#     , color=:gray
-# )
-# lines!(ax24, 
-#     0.5 .* Point2f0[(grid_params.xscale, grid_params.yscale)].+ Point2f0[(cos(α_opt), sin(α_opt))].*0.5r .+ Point2f0[(cos(α_opt+π/2), sin(α_opt+π/2)),(-cos(α_opt+π/2), -sin(α_opt+π/2))].*2r
-#     , color=:gray
-# )
-# lines!(ax24, 
-#     0.5 .* Point2f0[(grid_params.xscale, grid_params.yscale)].+ Point2f0[(cos(α_opt), sin(α_opt))].*r .+ Point2f0[(cos(α_opt+π/2), sin(α_opt+π/2)),(-cos(α_opt+π/2), -sin(α_opt+π/2))].*2r
-#     , color=:gray
-# )
-
 for (p,x₀) in zip(prob_offset[1], x₀s_offset)
     path = generate_straight_path(path_trange, α_opt, v_opt, x₀)
     (path_start,path_end) = path.(path_trange)
-    arrows!(ax23, 1000 .*(Point2f0[path_start].-Point2f0(domain[2]./2...)), 1000 .*(Point2f0[path_end .- path_start]), linewidth=2, linecolor=RGBAf0(0.2,0.2,0.2,p), arrowcolor=RGBAf0(0.2,0.2,0.2,p), arrowsize=0)
+    lines!(ax23, 1000 .*([Point2f0[path_start]; Point2f0[path_end]] .- Point2f0(domain[2]./2)), linewidth=2, color=RGBAf0(0.2,0.2,0.2,p))
 end
 
 # Plot the offset-dependent spike probability
-# lines!(ax23, hist_offset)
-# poly!(ax23, Point2f0.(eachrow(hist_offset)), color=color_4_50)
-# lines!(ax23, Point2f0.(eachrow(hist_offset)), linewidth=2, color=color_4)
 vlines!(ax33, [0], linestyle=:dash, color=:gray, linewidth=2)
 for (prob, linestyle) in zip(prob_offset, (:solid, :dash))
     lines!(ax33, 1000 .*offsets, prob; color=color_4, linewidth=2, linestyle)
@@ -254,8 +233,9 @@ end
 
 xlims!(ax11, -500 * domain[2][1], 500 * domain[2][1])
 ylims!(ax11, -500 * domain[2][2], 500 * domain[2][2])
+ylims!(ax12, -60.5, 0.5)
 
-save(joinpath("figures","place_cells2.pdf"), fig)
-save(joinpath("figures","place_cells2.svg"), fig)
-save(joinpath("figures","place_cells2.png"), fig)
+save(joinpath("figures","place_cells.pdf"), fig)
+save(joinpath("figures","place_cells.svg"), fig)
+save(joinpath("figures","place_cells.png"), fig)
 fig

@@ -64,20 +64,20 @@ firing_probabilities2 = [(prob_A .= a; prob_B .= b; P_fire(objects2[:C], volleys
 
 fig = Figure(resolution=(0.75textwidth,0.7textwidth))
 ax1a = fig[1,1] = Axis(fig, backgroundcolor=:transparent,
-    title="a.    single\n       segment", titlealign=:left,    
+    title="a.    single\n       segment", titlealign=:left, tellwidth=false    
 )
 
 ax2a = fig[1,2] = Axis(fig, backgroundcolor=:transparent,
-    title="b.    sequential\n       segments", titlealign=:left,
+    title="b.    sequential\n       segments", titlealign=:left, tellwidth=false
 )
 
 ax3a = fig[1,3] = Axis(fig, backgroundcolor=:transparent,
-    title="c.    parallel\n       segments", titlealign=:left,
+    title="c.    parallel\n       segments", titlealign=:left, tellwidth=false
 )
 
-ax1b = fig[2,1] = Axis(fig, xlabel="P₀", ylabel="Detection probability")#, aspect=DataAspect()
-ax2b = fig[2,2] = Axis(fig, xlabel="P₁", ylabel="P₂", )
-ax3b = fig[2,3] = Axis(fig, xlabel="P₁", ylabel="P₂", )
+ax1b = fig[2,1] = Axis(fig, xlabel="p₁", ylabel="Plateau probability")#, aspect=DataAspect()
+ax2b = fig[2,2] = Axis(fig, xlabel="p₁", ylabel="p₂", )
+ax3b = fig[2,3] = Axis(fig, xlabel="p₁", ylabel="p₂", )
 cell_col_1 = fig[3,1]
 cell_col_2 = fig[3,2:3]
 
@@ -85,31 +85,31 @@ colors = cgrad(:viridis,length(firing_probabilities0), categorical=true)
 for (prob,col) in zip(firing_probabilities0, colors)
     lines!(ax1b, probabilities, prob, color=col, linewidth=3)
 end
-ax_col_1 = Colorbar(cell_col_1, height=10, colormap=colors, limits=(0.5,10.5), ticks=1:10, label="TS", vertical=false, flipaxis = false)
+ax_col_1 = Colorbar(cell_col_1, height=10, colormap=colors, limits=(0.5,10.5), ticks=1:10, label="TS₁", vertical=false, flipaxis = false)
 
 contourf!(ax2b, probabilities, probabilities, firing_probabilities1, colormap=:viridis, colorrange=(0,1))
 
 contourf!(ax3b, probabilities, probabilities, firing_probabilities2, colormap=:viridis, colorrange=(0,1))
 
-p_n=plot!(ax3a, objects2[:C], ports=Dict(:C=>[],:A=>[:A],:B=>[:B]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>RGBAf0(0.5,0.5,0.5,0.5), :A=>color_1, :B=>color_2))
-ports = lift(x->last.(x) .- Point2f0[(-0.4,0),(0.4,0)], p_n.attributes[:ports])
-arrows!(ax3a, ports , Node([Point2f0(-0.3,0),Point2f0(0.3,0)]), linewidth=2, arrowsize = [-10,10])
-text!.(ax3a, "P₁", position=(@lift $ports[1]), align=(:right, :bottom), textsize=14, color=:black)
-text!.(ax3a, "P₂", position=(@lift $ports[2]), align=(:left, :bottom), textsize=14, color=:black)
+p_n=plot!(ax3a, objects2[:C], ports=Dict(:C=>[],:A=>[:A, :dummy],:B=>[:dummy, :B]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>RGBAf0(0.5,0.5,0.5,0.5), :A=>color_1, :B=>color_2))
+ports = Dict(p_n.attributes[:ports][])
+arrows!(ax3a, [ports[:A]-Point2f0(0.6,0),ports[:B]-Point2f0(0.45,0)], [Point2f0(0.55,0),Point2f0(0.4,0)], linewidth=2, arrowsize = [10,10])
+text!.(ax3a, "A~B(10,P₁)", position=ports[:A]-Point2f0(0.6,0), align=(:left, :top), textsize=14, color=:black)
+text!.(ax3a, "B~B(10,P₂)", position=ports[:B]-Point2f0(0.45,0), align=(:left, :bottom), textsize=14, color=:black)
 
 p_n=plot!(ax2a, objects1[:C], ports=Dict(:C=>[],:A=>[:A],:B=>[:B]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>RGBAf0(0.5,0.5,0.5,0.5), :A=>color_1, :B=>color_2))
-ports = lift(x->last.(x) .- Point2f0[(-0.4,0),(0.4,0)], p_n.attributes[:ports])
-arrows!(ax2a, ports , Node([Point2f0(-0.3,0),Point2f0(0.3,0)]), linewidth=2, arrowsize = [-10,10])
-text!.(ax2a, "P₁", position=(@lift $ports[1]), align=(:right, :bottom), textsize=14, color=:black)
-text!.(ax2a, "P₂", position=(@lift $ports[2]), align=(:left, :bottom), textsize=14, color=:black)
+ports = Dict(p_n.attributes[:ports][])
+arrows!(ax2a, [ports[:A]-Point2f0(0.35,0),ports[:B]-Point2f0(0.35,0)] , Node([Point2f0(0.3,0),Point2f0(0.3,0)]), linewidth=2, arrowsize = [10,10])
+text!.(ax2a, "A~B(10,P₁)", position=ports[:A]-Point2f0(0.35,0), align=(:left, :bottom), textsize=14, color=:black)
+text!.(ax2a, "B~B(10,P₂)", position=ports[:B]-Point2f0(0.35,0), align=(:left, :bottom), textsize=14, color=:black)
 
 p_n=plot!(ax1a, objects0[:C], ports=Dict(:C=>[:C],:A=>[:A]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:C=>RGBAf0(0.5,0.5,0.5,0.5), :A=>color_1, :B=>color_2))
-port = lift(x->[x[1][2] - Point2f0(-0.4,0)], p_n.attributes[:ports])
-arrows!(ax1a, port , [Point2f0(-0.3,0)], linewidth=2, arrowsize = -10)
-text!.(ax1a, "P₀", position=(@lift $ports[1]), align=(:right, :bottom), textsize=14, color=:black)
+ports = Dict(p_n.attributes[:ports][])
+arrows!(ax1a, [ports[:A]-Point2f0(0.35,0)], [Point2f0(0.3,0)], linewidth=2, arrowsize = 10)
+text!.(ax1a, "A~B(10,P₁)", position=ports[:A]-Point2f0(0.35,0), align=(:left, :bottom), textsize=14, color=:black)
 
 
-ax_col_2 = Colorbar(cell_col_2, height=10, colormap=:viridis, limits=(0,1), label="Detection probability for TS=5", vertical=false, flipaxis = false)
+ax_col_2 = Colorbar(cell_col_2, height=10, colormap=:viridis, limits=(0,1), label="Plateau probability for TS₁=TS₂=5", vertical=false, flipaxis = false)
 
 hidedecorations!(ax3a)
 hidespines!(ax3a)
@@ -141,7 +141,7 @@ ax2b.yticks[] = [0,0.5,1.0]
 
 
 
-save(joinpath("figures","probabilistic.pdf"), fig)
+# save(joinpath("figures","probabilistic.pdf"), fig)
 save(joinpath("figures","probabilistic.svg"), fig)
-save(joinpath("figures","probabilistic.png"), fig)
+# save(joinpath("figures","probabilistic.png"), fig)
 fig
