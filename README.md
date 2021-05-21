@@ -1,7 +1,7 @@
-# Active dendritic sequence processing (ADSP)
+# Dendritic plateau computation (DPC)
 
 This package contains the accompanying code for the publication
-"Event-based pattern detection in active dendrites"
+"A minimal model of neural computation with dendritic plateau potentials"
 
 
 # Files
