@@ -174,15 +174,15 @@ for (i,color) in enumerate((color_1, color_2, color_3))
         statetrace!(ax12, [0;1000 .* epsp.t;200], [0;Int.(epsp.state);0], Dict(0=>:transparent, 1=>color), -(i-1)*20 .+ -j, 0.9)
     end
 end
-# lines!(ax12, Rect(1000 .* plateau_starts_1.t[]-5.5, -20.25, 11, 20.5), color=color_1, linewidth=2)
+linesegments!(ax12, 1000 .* repeat(plateau_starts_1.t, inner=2), repeat([-20, 0], outer=length(plateau_starts_1.t)), color=color_1, linewidth=2)
 for t in plateau_extended_1.t
     lines!(ax12, 1000 .* [t,t], [-20.25, -0.25], color=color_1, linewidth=2)
 end
-# lines!(ax12, Rect(1000 .* plateau_starts_2.t[]-5.5, -40.25, 11, 20.5), color=color_2, linewidth=2)
+linesegments!(ax12, 1000 .* repeat(plateau_starts_2.t, inner=2), repeat([-40, -20], outer=length(plateau_starts_2.t)), color=color_2, linewidth=2)
 for t in plateau_extended_2.t
     lines!(ax12, 1000 .* [t,t], [-40.25, -20.25], color=color_2, linewidth=2)
 end
-# lines!(ax12, Rect(1000 .* spike_times.t[1]-5.5, -60.25, 11, 20.5), color=color_3, linewidth=2)
+linesegments!(ax12, 1000 .* repeat(spike_times.t, inner=2), repeat([-60, -40], outer=length(spike_times.t)), color=color_3, linewidth=2)
 
 xlims!(ax12, 1000 .* path_trange.+[-2,6])
 # Plot the neuron

@@ -155,7 +155,7 @@ pn1 = plot!(ax12, objects1[:n], ports=Dict(:n=>[:C],:seg2=>[:dummy, :B],:seg1=>[
 hidedecorations!(ax12)
 
 ports = Dict(pn1.attributes[:ports][])
-arrows!(ax12, [ports[x] - Point2f0(0.4, 0) for x in [:C,:B,:A]] , fill(Point2f0(0.3,0),3), linewidth=2, arrowsize = 10)
+arrows!(ax12, [ports[x] - Point2f0(0.4, 0) for x in [:C,:B,:A]] , fill(Point2f0(0.3,0),3), linewidth=2, arrowsize = -10)
 for (label,pos)  in zip(["C","B","A"], [ports[x] - Point2f0(0.45, 0) for x in [:C,:B,:A]])
     text!(ax12, label, position=pos, align=(:right, :center), textsize=14, color=:black)
 end
@@ -305,7 +305,7 @@ pn2 = plot!(ax22, objects2[:n], ports=Dict(:n=>[:C],:seg2=>[:dummy, :B],:seg1=>[
 hidedecorations!(ax22)
 
 ports = Dict(pn2.attributes[:ports][])
-arrows!(ax22, [ports[x] - Point2f0(0.4, 0) for x in [:C,:B,:A]] , fill(Point2f0(0.3,0),3), linewidth=2, arrowsize = 10)
+arrows!(ax22, [ports[x] - Point2f0(0.4, 0) for x in [:C,:B,:A]] , fill(Point2f0(0.3,0),3), linewidth=2, arrowsize = -10)
 for (label,pos)  in zip(["C","B","A"], [ports[x] - Point2f0(0.45, 0) for x in [:C,:B,:A]])
     text!(ax22, label, position=pos, align=(:right, :center), textsize=14, color=:black)
 end
