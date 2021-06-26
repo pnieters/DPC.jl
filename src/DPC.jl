@@ -1,4 +1,4 @@
-module ADSP
+module DPC
 
 include("model.jl")
 include("simulate.jl")

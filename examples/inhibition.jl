@@ -1,4 +1,4 @@
-using ADSP, CairoMakie
+using DPC, CairoMakie
 #include(joinpath(@__DIR__, "utils.jl"))
 include("utils.jl")
 
@@ -118,7 +118,7 @@ yticks,ytickformat = make_manual_ticks(0.5:14.5, reverse!(["$(grp)$(sub)" for gr
 
 ax11 = fig[2, 1] = Axis(fig; 
     yticks=(2.5:5:15, ["C","B","A"]), 
-    yminorticks=AbstractPlotting.IntervalsBetween(5, true),
+    yminorticks=IntervalsBetween(5, true),
     yminorticksvisible = true, yminorgridvisible = true, 
     titlealign=:left, title = "b.    Without inhibition"
 )
@@ -127,22 +127,30 @@ ax12 = fig[2, 2] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
 hidexdecorations!(ax11, grid=false)
 
 for (i, syn) in enumerate([syn11,syn12,syn13,syn14,syn15])
-    steps!(ax11, [0;syn.t;150], 9 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_1, color=:transparent)
+    statetrace!(ax11, [0;syn.t;150], [0;syn.state;0], Dict(0=>:transparent, 1=>color_1), 9 + i, 0.9 )
 end
-steps!(ax11, [0;seg1.t;150], 10 .+ 2.45 .* [0;Int.(seg1.state);0], fill=color_1_50, color=:transparent)
+statetrace!(ax11, [0;seg1.t;150], [DPC.voltage_low;seg1.state;DPC.voltage_low], Dict(DPC.voltage_low=>:transparent, DPC.voltage_elevated=>color_1_25, DPC.voltage_high=>color_1_50), 10, 4.9)
 
 for (i, syn) in enumerate([syn21,syn22,syn23,syn24,syn25])
-    steps!(ax11, [0;syn.t;150], 4 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_2, color=:transparent)
+    statetrace!(ax11, [0;syn.t;150], [0;syn.state;0], Dict(0=>:transparent, 1=>color_2), 4 .+ i, 0.9 )
 end
-steps!(ax11, [0;seg2.t;150], 5 .+ 5 .* ([0;Int.(seg2.state);0].>1), fill=color_2_50, color=:transparent)
+statetrace!(ax11, [0;seg2.t;150], [DPC.voltage_low;seg2.state;DPC.voltage_low], Dict(DPC.voltage_low=>:transparent, DPC.voltage_elevated=>color_2_25, DPC.voltage_high=>color_2_50), 5, 4.9)
 
 for (i, syn) in enumerate([syn31,syn32,syn33,syn34,syn35])
-    steps!(ax11, [0;syn.t;150], -1 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_3, color=:transparent)
+    statetrace!(ax11, [0;syn.t;150], [0;syn.state;0], Dict(0=>:transparent, 1=>color_3), -1 .+ i, 0.9 )
 end
-lines!.(ax11, Rect.(spike_times .- 5.5, -0.05, 11, 5.1), color=:gray10, linewidth=2)
 
+arrows!(ax11, spike_times.+30, fill(2.5,length(spike_times)), fill(-20,length(spike_times)), fill(0,length(spike_times)))
+text!(ax11, 
+    fill(" spike", length(spike_times)),
+    position=Point2f0.(spike_times.+30,fill(2.5,length(spike_times))),
+    align=(:left,:center),
+    textsize=12
+)
 ylims!(ax11, (-0.5,15.5))
 
+fig
+##
 pn1 = plot!(ax12, objects1[:n], ports=Dict(:n=>[:C],:seg2=>[:dummy, :B],:seg1=>[:dummy, :A]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_3, :seg1=>color_1, :seg2=>color_2))
 hidedecorations!(ax12)
 
@@ -260,7 +268,7 @@ spike_times = filter(x->(x.object == :n && x.event == :spikes), logger.data).t
 ## Plot
 ax21 = fig[3, 1] = Axis(fig; 
     yticks=(2.5:5:15, ["C","B","A"]), 
-    yminorticks=AbstractPlotting.IntervalsBetween(5, true),
+    yminorticks=Makie.IntervalsBetween(5, true),
     yminorticksvisible = true, yminorgridvisible = true, 
     titlealign=:left, title = "c.    With inhibition",
     xlabel="time [ms]"
@@ -269,30 +277,28 @@ ax22 = fig[3, 2] = Axis(fig, aspect=DataAspect(), backgroundcolor=:transparent)
 
 
 for (i, syn) in enumerate([syn11,syn12,syn13,syn14,syn15])
-    steps!(ax21, [0;syn.t;150], 9 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_1, color=:transparent)
+    statetrace!(ax21, [0;syn.t;150], [0;syn.state;0], Dict(0=>:transparent, 1=>color_1), 9 .+ i ,  0.9 )
 end
-steps!(ax21, [0;seg1.t;150], 10 .+ 2.45 .* [0;Int.(seg1.state);0], fill=color_1_50, color=:transparent)
+statetrace!(ax21, [0;seg1.t;150], [DPC.voltage_low;seg1.state;DPC.voltage_low], Dict(DPC.voltage_low=>:transparent, DPC.voltage_elevated=>color_1_25, DPC.voltage_high=>color_1_50), 10 , 4.9)
 
 for (i, syn) in enumerate([syn21,syn22,syn23,syn24,syn25])
-    steps!(ax21, [0;syn.t;150], 4 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_2, color=:transparent)
+    statetrace!(ax21, [0;syn.t;150], [0;syn.state;0], Dict(0=>:transparent, 1=>color_2), 4 .+ i ,  0.9 )
 end
-steps!(ax21, [0;seg2.t;150], 5 .+ 5 .* ([0;Int.(seg2.state);0].>1), fill=color_2_50, color=:transparent)
+statetrace!(ax21, [0;seg2.t;150],  [DPC.voltage_low;seg2.state;DPC.voltage_low], Dict(DPC.voltage_low=>:transparent, DPC.voltage_elevated=>color_2_25, DPC.voltage_high=>color_2_50), 5 ,  5 )
 
 for (i, syn) in enumerate([syn31,syn32,syn33,syn34,syn35])
-    steps!(ax21, [0;syn.t;150], -1 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_3, color=:transparent)
+    statetrace!(ax21, [0;syn.t;150], [0;syn.state;0], Dict(0=>:transparent, 1=>color_3), -1 .+ i ,  0.9 )
 end
-# steps!(ax21, [0;n.t;900], 0 .+ 2.45 .* [0;Int.(n.state);0], fill=color_3_50)
-# steps!(ax21, [0;seg1.t;900], 1 .+ 0.45 .* [0;Int.(seg1.state);0], fill=color_1_50)
 
 
-# lines!.(ax21, Rect.(plateau1_starts .- 5.5, 9.95, 11, 5.1), color=:gray10, linewidth=2)
-# lines!.(ax21, Rect.(plateau2_starts .- 5.5, 4.95, 11, 5.1), color=:gray10, linewidth=2)
-lines!.(ax21, Rect.(spike_times .- 5.5, -0.05, 11, 5.1), color=:gray10, linewidth=2)
+arrows!(ax21, spike_times.+30, fill(2.5,length(spike_times)), fill(-20,length(spike_times)), fill(0,length(spike_times)))
+text!(ax21, 
+    fill(" spike", length(spike_times)),
+    position=Point2f0.(spike_times.+30,fill(2.5,length(spike_times))),
+    align=(:left,:center),
+    textsize=12
+)
 
-# arrows!(ax21, Point2f0[(spike_times[]-5.5,2.5)], Point2f0[(-59.5,0)], linewidth=2, arrowsize = 20, linecolor=:gray10, arrowcolor=:gray10)
-# arrows!(ax21, Point2f0[(spike_times[]+5.5,2.5)], Point2f0[(59.5,0)], linewidth=2, arrowsize = -20, linecolor=:gray10, arrowcolor=:gray10)
-
-# linesegments!(ax21, repeat(spike_times, inner=2), repeat([-0.5,15.5], outer=length(spike_times)), linewidth=3, linestyle=:dash, color=:gray10)
 ylims!(ax21, (-0.5,15.5))
 
 pn2 = plot!(ax22, objects2[:n], ports=Dict(:n=>[:C],:seg2=>[:dummy, :B],:seg1=>[:dummy, :A, :nC1]), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_3, :seg1=>color_1, :seg2=>color_2))

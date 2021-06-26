@@ -1,4 +1,4 @@
-using ADSP, CairoMakie
+using DPC, CairoMakie
 #include(joinpath(@__DIR__, "utils.jl"))
 include("utils.jl")
 
@@ -163,19 +163,19 @@ ax_right = fig[1,3] = Axis(fig; backgroundcolor=:transparent)
 gl = fig[1,2] = GridLayout(alignmode=Outside())
 ax_chain = gl[1,1] = Axis(fig; 
     yticks=(2.5:5:15, ["C","B","A"]), 
-    yminorticks=AbstractPlotting.IntervalsBetween(5, true),
+    yminorticks=Makie.IntervalsBetween(5, true),
     yminorticksvisible = true, yminorgridvisible = true, 
     titlealign=:left, title = "a.    Sequential segments"
 )
 ax_or    = gl[2,1] = Axis(fig; 
     yticks=(2.5:5:15, ["C","B","A"]), 
-    yminorticks=AbstractPlotting.IntervalsBetween(5, true),
+    yminorticks=Makie.IntervalsBetween(5, true),
     yminorticksvisible = true, yminorgridvisible = true, 
     titlealign=:left, title = "b.    Parallel segments (either required)"
 )
 ax_and   = gl[3,1] = Axis(fig; 
     yticks=(2.5:5:15, ["C","B","A"]),  
-    yminorticks=AbstractPlotting.IntervalsBetween(5, true),
+    yminorticks=Makie.IntervalsBetween(5, true),
     yminorticksvisible = true, yminorgridvisible = true, 
     titlealign=:left, title = "c.    Parallel segments (both required)", xlabel="time [ms]"
 )
@@ -227,28 +227,25 @@ for (name, config, ax) in ((:chain,config_chain,ax_chain), (:or,config_or,ax_or)
     spike_times = filter(x->(x.object == :n && x.event == :spikes), logger.data).t
     # plot dynamics
 
-    steps!(ax, [0;seg0.t;500], 0 .+ 4.9 .* [0;Int.(seg0.state .== ADSP.voltage_elevated);0], fill=color_3_25, color=:transparent)
-    steps!(ax, [0;seg0.t;500], 0 .+ 4.9 .* [0;Int.(seg0.state .== ADSP.voltage_high);0], fill=color_3_50, color=:transparent)
-    steps!(ax, [0;seg2.t;500], 5 .+  4.9 .* [0;Int.(seg2.state .== ADSP.voltage_elevated);0], fill=color_2_25, color=:transparent)
-    steps!(ax, [0;seg2.t;500], 5 .+  4.9 .* [0;Int.(seg2.state .== ADSP.voltage_high);0], fill=color_2_50, color=:transparent)
-    steps!(ax, [0;seg1.t;500], 10 .+ 4.9 .* [0;Int.(seg1.state .== ADSP.voltage_elevated);0], fill=color_1_25, color=:transparent)
-    steps!(ax, [0;seg1.t;500], 10 .+ 4.9 .* [0;Int.(seg1.state .== ADSP.voltage_high);0], fill=color_1_50, color=:transparent)
+    statetrace!(ax, [0;seg0.t;500], [DPC.voltage_low;seg0.state;DPC.voltage_low], Dict(DPC.voltage_low=>:transparent, DPC.voltage_elevated=>color_3_25, DPC.voltage_high=>color_3_50), 0 ,  4.9 )
+    statetrace!(ax, [0;seg2.t;500], [DPC.voltage_low;seg2.state;DPC.voltage_low], Dict(DPC.voltage_low=>:transparent, DPC.voltage_elevated=>color_2_25, DPC.voltage_high=>color_2_50), 5 ,   4.9 )
+    statetrace!(ax, [0;seg1.t;500], [DPC.voltage_low;seg1.state;DPC.voltage_low], Dict(DPC.voltage_low=>:transparent, DPC.voltage_elevated=>color_1_25, DPC.voltage_high=>color_1_50), 10 ,  4.9 )
 
     # plot spikes
     for (i, syn) in enumerate([syn11,syn12,syn13,syn14,syn15])
-        steps!(ax, [0;syn.t;500], 9 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_1, color=:transparent)
+        statetrace!(ax, [0;syn.t;500], [0;syn.state;0], Dict(0=>:transparent, 1=>color_1), 9 .+ i ,  0.9 )
     end
     
     for (i, syn) in enumerate([syn21,syn22,syn23,syn24,syn25])
-        steps!(ax, [0;syn.t;500], 4 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_2, color=:transparent)
+        statetrace!(ax, [0;syn.t;500], [0;syn.state;0], Dict(0=>:transparent, 1=>color_2), 4 .+ i ,  0.9 )
     end
 
     for (i, syn) in enumerate([syn31,syn32,syn33,syn34,syn35])
-        steps!(ax, [0;syn.t;500], -1 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_3, color=:transparent)
+        statetrace!(ax, [0;syn.t;500], [0;syn.state;0], Dict(0=>:transparent, 1=>color_3), -1 .+ i ,  0.9 )
     end
 
     # plot output spikes
-    lines!.(ax, Rect.(plateau0_starts.-5.5, -0.25, 11, 5.5), color=:gray10, linewidth=2)
+    # lines!.(ax, Rect.(plateau0_starts.-5.5, -0.25, 11, 5.5), color=:gray10, linewidth=2)
 
 
     # plot neurons

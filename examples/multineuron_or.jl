@@ -1,4 +1,4 @@
-using ADSP, CairoMakie
+using DPC, CairoMakie
 #include(joinpath(@__DIR__, "utils.jl"))
 include("utils.jl")
 
@@ -93,17 +93,17 @@ ax12 = fig[1, 2] = Axis(fig, aspect=DataAspect())
 
 # linesegments!(ax11, repeat(spike_times, inner=2), repeat([0,15], outer=length(spike_times)), linewidth=2, linestyle=:dash, color=:gray10)
 for (i, syn) in enumerate([syn11,syn12,syn13,syn14,syn15])
-  steps!(ax11, [0;syn.t;650], 9 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_1, color=:transparent)
+  statetrace!(ax11, [0;syn.t;650], [0;syn.state;0], Dict(0=>:transparent, 1=>color_1), 9 .+ i ,  0.9 )
 end
-steps!(ax11, [0;seg1.t;650], 10 .+ 2.45 .* [0;Int.(seg1.state);0], fill=color_1_50, color=:transparent)
+statetrace!(ax11, [0;seg1.t;650], [DPC.voltage_low;seg1.state;DPC.voltage_low], Dict(DPC.voltage_low=>:transparent, DPC.voltage_elevated=>color_1_25, DPC.voltage_high=>color_1_50), 10 , 4.9)
 
 for (i, syn) in enumerate([syn21,syn22,syn23,syn24,syn25])
-  steps!(ax11, [0;syn.t;650], 4 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_2, color=:transparent)
+  statetrace!(ax11, [0;syn.t;650], [0;syn.state;0], Dict(0=>:transparent, 1=>color_2), 4 .+ i ,  0.9 )
 end
-steps!(ax11, [0;seg2.t;650], 5 .+ 2.45 .* [0;Int.(seg2.state);0], fill=color_2_50, color=:transparent)
+statetrace!(ax11, [0;seg2.t;650], [DPC.voltage_low;seg2.state;DPC.voltage_low], Dict(DPC.voltage_low=>:transparent, DPC.voltage_elevated=>color_2_25, DPC.voltage_high=>color_2_50), 5 , 4.9)
 
 for (i, syn) in enumerate([syn31,syn32,syn33,syn34,syn35])
-  steps!(ax11, [0;syn.t;650], -1 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_3, color=:transparent)
+  statetrace!(ax11, [0;syn.t;650], [0;syn.state;0], Dict(0=>:transparent, 1=>color_3), -1 .+ i ,  0.9 )
 end
 
 
@@ -114,10 +114,10 @@ lines!.(ax11, Rect.(spike_times .- 5.5, -0.05, 11, 5.1), color=:gray10, linewidt
 pn=plot!(ax12, objects[:n], ports=Dict(:n=>[:C],:seg1=>[:A],:seg2=>[:B]), angle_between=30/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n=>color_3, :seg1=>color_1, :seg2=>color_2))
 ports = Dict(pn.attributes[:ports][])
 
-text!(ax12, " A ", position=ports[:A] - Point2f0(-0.3,0), align=(:left, :center), textsize=0.25, color=:black)
-text!(ax12, " B ", position=ports[:B] - Point2f0( 0.3,0), align=(:right, :center), textsize=0.25, color=:black)
-text!(ax12, " C ", position=ports[:C] - Point2f0(-0.3,0), align=(:left, :center), textsize=0.25, color=:black)
-arrows!(ax12, [ports[:A]-Point2f0(-0.3,0), ports[:B]-Point2f0(0.3,0), ports[:C]-Point2f0(-0.3,0)] , [Point2f0(-0.2,0.0),Point2f0(0.2,0.0),Point2f0(-0.2,0.0)], linewidth=2, arrowsize = [-20, 20, -20], color=:black, arrowcolor=:black)
+text!(ax12, " A ", position=ports[:A] - Point2f0(-0.3,0), align=(:left, :center), textsize=16, color=:black)
+text!(ax12, " B ", position=ports[:B] - Point2f0( 0.3,0), align=(:right, :center), textsize=16, color=:black)
+text!(ax12, " C ", position=ports[:C] - Point2f0(-0.3,0), align=(:left, :center), textsize=16, color=:black)
+arrows!(ax12, [ports[:A]-Point2f0(-0.3,0), ports[:B]-Point2f0(0.3,0), ports[:C]-Point2f0(-0.3,0)] , [Point2f0(-0.2,0.0),Point2f0(0.2,0.0),Point2f0(-0.2,0.0)], linewidth=2, arrowsize = [-20, -20, -20], color=:black, arrowcolor=:black)
 
 
 xlims!(ax12, [-1,1])
@@ -218,22 +218,22 @@ ax22 = fig[2, 2] = Axis(fig, aspect=DataAspect())
 
 # linesegments!(ax211, repeat(spike_times1, inner=2), repeat([0,5], outer=length(spike_times1)), linestyle=:dash, linewidth=2, color=:gray10)
 for (i, syn) in enumerate([syn11,syn12,syn13,syn14,syn15])
-  steps!(ax211, [0;syn.t;650], -1 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_1, color=:transparent)
+  statetrace!(ax211, [0;syn.t;650], [0;syn.state;0], Dict(0=>:transparent, 1=>color_1), -1 .+ i ,  0.9 )
 end
 
 
 # linesegments!(ax212, repeat(spike_times2, inner=2), repeat([0,5], outer=length(spike_times2)), linestyle=:dash, linewidth=2, color=:gray10)
 for (i, syn) in enumerate([syn21,syn22,syn23,syn24,syn25])
-  steps!(ax212, [0;syn.t;650], -1 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_2, color=:transparent)
+  statetrace!(ax212, [0;syn.t;650], [0;syn.state;0], Dict(0=>:transparent, 1=>color_2), -1 .+ i ,  0.9 )
 end
 
-steps!(ax213, [0;seg.t;650], 5 .+ 1 .* [0;Int.(seg.state);0], fill=:gray50, color=:transparent)
+statetrace!(ax213, [0;seg.t;650],  [DPC.voltage_low;seg.state;DPC.voltage_low], Dict(DPC.voltage_low=>:transparent, DPC.voltage_elevated=>:gray25, DPC.voltage_high=>:gray50), 5 ,  2 )
 # linesegments!(ax213, repeat(spike_times3, inner=2), repeat([0,7], outer=length(spike_times3)), linestyle=:dash, linewidth=2, color=:gray10)
 for (i, syn) in enumerate([syn31, syn32, syn33, syn34, syn35])
-  steps!(ax213, [0;syn.t;650], -1 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=color_3, color=:transparent)
+  statetrace!(ax213, [0;syn.t;650], [0;syn.state;0], Dict(0=>:transparent, 1=>color_3), -1 .+ i ,  0.9 )
 end
 for (i, syn) in enumerate([syn41,syn42])
-  steps!(ax213, [0;syn.t;650], 4.0 .+ i .+ 0.9 .* [0;Int.(syn.state);0], fill=:gray10, color=:transparent)
+  statetrace!(ax213, [0;syn.t;650], [0;syn.state;0], Dict(0=>:transparent, 1=>:gray10), 4.0 .+ i ,  0.9 )
 end
 
 lines!.(ax211, Rect.(spike_times1 .- 5.5, -0.05, 11, 5.1), color=:gray10, linewidth=2)
@@ -247,7 +247,7 @@ pn=plot!(ax22, objects[:n3], ports=Dict(:n3=>[:C], :seg=>[:dummy, :A, :B]), root
 # plot synapses
 ports = Dict(pn.attributes[:ports][])
 # arrows!(ax22, [ports[x] - Point2f0(0.4, 0) for x in [:C,:B,:A]] , fill(Point2f0(0.3,0),3), linewidth=2, arrowsize = 20)
-arrows!(ax22, [ports[:A]-Point2f0(0.25,0), ports[:B]-Point2f0(-0.25,0)] , [Point2f0(0.1,0.0),Point2f0(-0.1,0.0)], linewidth=2, arrowsize = [20, -20], color=:black, arrowcolor=:black)
+arrows!(ax22, [ports[:A]-Point2f0(0.25,0), ports[:B]-Point2f0(-0.25,0)] , [Point2f0(0.1,0.0),Point2f0(-0.1,0.0)], linewidth=2, arrowsize = [-20, -20], color=:black, arrowcolor=:black)
 lines!(ax22, [Point2f0(0.0, 0.0), ports[:A] - Point2f0(0.5,-0.25), ports[:A] - Point2f0(0.25,0.0)], color=:black, linewidth=2)
 lines!(ax22, [Point2f0(1.0, -1.25), ports[:B] - Point2f0(-0.5,-0.25), ports[:B] - Point2f0(-0.25,0.0)], color=:black, linewidth=2)
 
@@ -255,13 +255,13 @@ pn2=plot!(ax22, objects[:n1], ports=Dict(:n1=>[:A]), angle_between=20/180*π, br
 pn3=plot!(ax22, objects[:n2], ports=Dict(:n2=>[:B]), root_position=Point2f0(1,-1.25), angle_between=20/180*π, branch_width=0.2, branch_length=1.0, color=Dict(:n2=>color_2), linewidth=2)
 ports2 = Dict(pn2.attributes[:ports][])
 ports3 = Dict(pn3.attributes[:ports][])
-arrows!(ax22, [ports2[:A]-Point2f0(-0.3,0), ports3[:B]-Point2f0(0.3,0), ports[:C]-Point2f0(-0.3,0)] , [Point2f0(-0.2,0.0),Point2f0(0.2,0.0),Point2f0(-0.2,0.0)], linewidth=2, arrowsize = [-20, 20, -20], color=:black, arrowcolor=:black)
+arrows!(ax22, [ports2[:A]-Point2f0(-0.3,0), ports3[:B]-Point2f0(0.3,0), ports[:C]-Point2f0(-0.3,0)] , [Point2f0(-0.2,0.0),Point2f0(0.2,0.0),Point2f0(-0.2,0.0)], linewidth=2, arrowsize = [-20, -20, -20], color=:black, arrowcolor=:black)
 
-text!(ax22, " A ", position=ports2[:A] - Point2f0(-0.3,0), align=(:left, :center), textsize=0.25, color=:black)
-text!(ax22, " B ", position=ports3[:B] - Point2f0( 0.3,0), align=(:right, :center), textsize=0.25, color=:black)
-text!(ax22, " C ", position=ports[:C]  - Point2f0(-0.3,0), align=(:left, :center), textsize=0.25, color=:black)
+text!(ax22, " A ", position=ports2[:A] - Point2f0(-0.3,0), align=(:left, :center), textsize=16, color=:black)
+text!(ax22, " B ", position=ports3[:B] - Point2f0( 0.3,0), align=(:right, :center), textsize=16, color=:black)
+text!(ax22, " C ", position=ports[:C]  - Point2f0(-0.3,0), align=(:left, :center), textsize=16, color=:black)
 
-ylims!(ax213, [-0.5, 7.5])
+ylims!(ax213, -0.5, 7.5)
 ################################################################################
 
 hidedecorations!(ax12)

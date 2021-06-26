@@ -1,4 +1,4 @@
-using AbstractPlotting
+using Makie
 import DataStructures: DefaultDict
 
 export Port
@@ -10,7 +10,7 @@ export Port
     )
 end
 
-function AbstractPlotting.plot!(myplot::Steps)
+function Makie.plot!(myplot::Steps)
     t = myplot[1]
     y = myplot[2]
 
@@ -25,12 +25,40 @@ function AbstractPlotting.plot!(myplot::Steps)
         end
     end
 
-    AbstractPlotting.Observables.onany(update!, t, y)
+    Makie.Observables.onany(update!, t, y)
     update!(t[],y[])
 
     poly!(myplot, line, color=myplot[:fill])
     lines!(myplot, line, color=myplot[:color])
     myplot
+end
+
+
+@recipe(StateTrace, t, state, color, offset, height) do scene
+    Theme(
+    )
+end
+
+function Makie.plot!(plt::StateTrace)
+    t,state,color,offset,height=plt[:t],plt[:state],plt[:color],plt.offset,plt.height
+    rects = Node(Rect2D{Float64}[])
+    colors = Node(Any[])
+    
+    Makie.Observables.onany(t, state, color, offset, height) do t,state,color, offset, height
+        t₀,s₀ = first(t),first(state)
+        for (t₁,s₁) in zip(t[2:end],state[2:end])
+            push!(rects[], Rect(float(t₀), float(offset), float(t₁-t₀), float(height)))
+            push!(colors[], color[s₀])
+            t₀,s₀ = t₁,s₁
+        end
+    end
+
+    # Force update
+    t[] = t[]
+
+    poly!(plt, rects, color=colors)
+
+    plt
 end
 
 
@@ -41,7 +69,7 @@ end
 Port{W}(name::I) where {W,I} = Port{W,I}(name)
 
 
-function AbstractPlotting.default_theme(scene::AbstractPlotting.SceneLike, ::Type{<: AbstractPlotting.Plot(Neuron)})
+function Makie.default_theme(scene::Makie.SceneLike, ::Type{<: Makie.Plot(Neuron)})
     Theme(
         color=RGBAf0(0.9,0.9,0.9,1.0),
         branch_width=0.1,
@@ -54,8 +82,7 @@ function AbstractPlotting.default_theme(scene::AbstractPlotting.SceneLike, ::Typ
     )
 end
 
-
-function AbstractPlotting.plot!(treeplot::AbstractPlotting.Plot(Neuron))
+function Makie.plot!(treeplot::Makie.Plot(Neuron))
     # get the actual object to plot
     tree = to_value(treeplot[1])
     # get position of the root = offset of all nodes
