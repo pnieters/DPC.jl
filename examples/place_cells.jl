@@ -1,4 +1,4 @@
-using ADSP, CairoMakie, ProgressMeter, Distributions, AbstractPlotting.MakieLayout
+using DPC, CairoMakie, ProgressMeter, Distributions, Makie.MakieLayout
 
 #include(joinpath(@__DIR__, "utils.jl"))
 include("utils.jl")
@@ -48,8 +48,6 @@ plateau_starts_2 = filter(x->(x.object==:seg2 && x.event==:plateau_starts), spec
 plateau_extended_1 = filter(x->(x.object==:seg1 && x.event==:plateau_extended), special_path.logger.data)
 plateau_extended_2 = filter(x->(x.object==:seg2 && x.event==:plateau_extended), special_path.logger.data)
 spike_times = filter(x->(x.object==:n && x.event==:spikes), special_path.logger.data)
-
-fig
 
 ## Vary the speed
 α_opt = 2π/6
@@ -131,7 +129,7 @@ gl = fig[1,2:3] = GridLayout()
 ax12 = gl[1,1] = Axis(fig; 
     title="b.    Activity for the highlighted path", titlealign=:left, xlabel="time [ms]", 
     yticks=([-50, -30, -10], ["C","B","A"]), 
-    yminorticks=AbstractPlotting.IntervalsBetween(20, true),
+    yminorticks=Makie.IntervalsBetween(20, true),
     yminorticksvisible = true, yminorgridvisible = true, 
 )
 ax13 = gl[1,2] = Axis(fig; aspect=DataAspect(), backgroundcolor=:transparent)
@@ -159,30 +157,32 @@ linkyaxes!(ax31, ax33)
 # Plot the stochastically sampled paths
 for path in paths[2:end]
     lines!(ax11, 1000 .*(path.x.-domain[2][1]/2), 1000 .*(path.y.-domain[2][2]/2), linewidth=2, color=RGBAf0(0.2,0.2,0.2,0.5))
+    arrows!(ax11, 1000 .* [Point2f0(path.x[end],path.y[end]).-domain[2]./2], [Point2f0(path.x[end] - path.x[end-1], path.y[end] - path.y[end-1])], linewidth=2, color=RGBAf0(0.2,0.2,0.2,0.5))
 end
 lines!(ax11, 1000 .*(paths[1].x.-domain[2][1]/2), 1000 .*(paths[1].y.-domain[2][2]/2), linewidth=4, color=color_4)
+arrows!(ax11, 1000 .* [Point2f0(paths[1].x[end],paths[1].y[end]).-domain[2]./2], [Point2f0(paths[1].x[end] - paths[1].x[end-1], paths[1].y[end] - paths[1].y[end-1])], linewidth=4, color=color_4)
 
 
 # Plot the spikes, plateaus and rectangles to highlight plateau triggers
 seg1 = get_trace(:seg1, special_path.logger.data)
-steps!(ax12, [0;1000 .* seg1.t;200], 19.9*[0;Int.(seg1.state).>1;0] .- 20.05, color=:transparent, fill=color_1_50)
+statetrace!(ax12, [0;1000 .* seg1.t;200], [DPC.voltage_low;seg1.state;DPC.voltage_low], Dict(DPC.voltage_low=>:transparent, DPC.voltage_elevated=>color_1_25, DPC.voltage_high=>color_1_50), -20.05, 19.9)
 seg2 = get_trace(:seg2, special_path.logger.data)
-steps!(ax12, [0;1000 .* seg2.t;200], 19.9*[0;Int.(seg2.state).>1;0] .- 40.05, color=:transparent, fill=color_2_50)
+statetrace!(ax12, [0;1000 .* seg2.t;200], [DPC.voltage_low;seg2.state;DPC.voltage_low], Dict(DPC.voltage_low=>:transparent, DPC.voltage_elevated=>color_2_25, DPC.voltage_high=>color_2_50), -40.05, 19.9)
 for (i,color) in enumerate((color_1, color_2, color_3))
     for j in 1:20
         epsp = get_trace(Symbol("syn$(i)$(lpad(j,2,"0"))"), special_path.logger.data)
-        steps!(ax12, [0;1000 .* epsp.t;200],-(i-1)*20 .+ -j .+ 0.9 .* [0;Int.(epsp.state);0], color=:transparent, fill=color)
+        statetrace!(ax12, [0;1000 .* epsp.t;200], [0;Int.(epsp.state);0], Dict(0=>:transparent, 1=>color), -(i-1)*20 .+ -j, 0.9)
     end
 end
-lines!(ax12, Rect(1000 .* plateau_starts_1.t[]-5.5, -20.25, 11, 20.5), color=color_1, linewidth=2)
+# lines!(ax12, Rect(1000 .* plateau_starts_1.t[]-5.5, -20.25, 11, 20.5), color=color_1, linewidth=2)
 for t in plateau_extended_1.t
     lines!(ax12, 1000 .* [t,t], [-20.25, -0.25], color=color_1, linewidth=2)
 end
-lines!(ax12, Rect(1000 .* plateau_starts_2.t[]-5.5, -40.25, 11, 20.5), color=color_2, linewidth=2)
+# lines!(ax12, Rect(1000 .* plateau_starts_2.t[]-5.5, -40.25, 11, 20.5), color=color_2, linewidth=2)
 for t in plateau_extended_2.t
     lines!(ax12, 1000 .* [t,t], [-40.25, -20.25], color=color_2, linewidth=2)
 end
-lines!(ax12, Rect(1000 .* spike_times.t[1]-5.5, -60.25, 11, 20.5), color=color_3, linewidth=2)
+# lines!(ax12, Rect(1000 .* spike_times.t[1]-5.5, -60.25, 11, 20.5), color=color_3, linewidth=2)
 
 xlims!(ax12, 1000 .* path_trange.+[-2,6])
 # Plot the neuron
@@ -195,7 +195,8 @@ plot!(ax13, objects[:n],
 # Plot the optimal path
 path_opt = generate_straight_path(path_trange, α_opt, v_opt, x₀_opt)
 (path_start,path_end) = path_opt.(path_trange)
-lines!(ax21, 1000 .*([Point2f0[path_start]; Point2f0[path_end]] .- Point2f0(domain[2]./2)), linewidth=2, color=:black)
+arrows!(ax21, 1000 .* Point2f0[path_start .- domain[2]./2], 1000 .* Point2f0[path_end .- path_start], linewidth=2, color=:black)
+
 
 # Plot the speed-dependent spike probability
 vlines!(ax31, [v_opt], linestyle=:dash, color=:gray, linewidth=2)
@@ -204,11 +205,15 @@ for (prob, linestyle) in zip(prob_speed, (:solid, :dash))
 end
 
 # Plot the rotated paths
-for (p,α,x₀) in zip(prob_rotated[1], αs, x₀s_rotated)
+pos = Point2f0[]
+dir = Point2f0[]
+for (α,x₀) in zip(αs, x₀s_rotated)
     path = generate_straight_path(path_trange, α, v_opt, x₀)
     (path_start,path_end) = path.(path_trange)
-    lines!(ax22, 1000 .*([Point2f0[path_start]; Point2f0[path_end]] .- Point2f0(domain[2]./2)), linewidth=2, color=RGBAf0(0.2,0.2,0.2,p))
+    push!(pos, path_start .- domain[2]./2)
+    push!(dir, path_end .- path_start)
 end
+arrows!(ax22, 1000 .* pos, 1000 .* dir, linewidth=2, color=RGBAf0.(0.2,0.2,0.2,prob_rotated[1]))
 
 # Plot the orientation-dependent spike probability
 vlines!(ax32, [α_opt].*180/π, linestyle=:dash, color=:gray, linewidth=2)
@@ -219,11 +224,15 @@ end
 
 
 # Plot the offset paths
+pos = Point2f0[]
+dir = Point2f0[]
 for (p,x₀) in zip(prob_offset[1], x₀s_offset)
     path = generate_straight_path(path_trange, α_opt, v_opt, x₀)
     (path_start,path_end) = path.(path_trange)
-    lines!(ax23, 1000 .*([Point2f0[path_start]; Point2f0[path_end]] .- Point2f0(domain[2]./2)), linewidth=2, color=RGBAf0(0.2,0.2,0.2,p))
+    push!(pos, path_start .- domain[2]./2)
+    push!(dir, path_end .- path_start)
 end
+arrows!(ax23, 1000 .* pos, 1000 .* dir, linewidth=2, color=RGBAf0.(0.2,0.2,0.2,prob_offset[1]))
 
 # Plot the offset-dependent spike probability
 vlines!(ax33, [0], linestyle=:dash, color=:gray, linewidth=2)

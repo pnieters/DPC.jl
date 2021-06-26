@@ -138,7 +138,7 @@ Simulates one traversal of the `path` by the given `net` over a time-interval `t
 Spikes are generated for each population in `populations` in volleys at fixed rate `λ`.
 """
 function run_path!(net, trange, path, populations, λ; extra_events=Event{Float64}[], kwargs...)
-    ADSP.reset!(net)
+    DPC.reset!(net)
     
     # convert path into spike trains and convert the spike trains into Events
     s = generate_path_spikes(trange, path, populations, λ; kwargs...)

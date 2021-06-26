@@ -1,4 +1,4 @@
-using ADSP, Test
+using DPC, Test
 
 @testset "All unit tests" begin
     @testset "YAML-loading tests" begin
