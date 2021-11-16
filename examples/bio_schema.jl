@@ -63,7 +63,7 @@ plot!(ax, objects[:neuron], angle_between=angles, branch_width=diams, branch_len
 hidedecorations!(ax)
 hidespines!(ax)
 xlims!(ax, [-2.5,3.5])
-ylims!(ax, [-0.5,5.5])
+ylims!(ax, (-0.5,5.5))
 
 save(joinpath("figures", "bio_schema.svg"), fig)
 save(joinpath("figures", "bio_schema.png"), fig)
