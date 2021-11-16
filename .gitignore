@@ -7,3 +7,5 @@ data/*
 *.h5
 Manifest.toml
 .vscode/settings.json
+*.png
+*.pdf
