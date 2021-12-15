@@ -62,7 +62,7 @@ offsets = LinRange(-2r,2r,31)
 x₀s_offset = eachrow(x₀_opt' .+ [cos(α_opt+π/2) sin(α_opt+π/2)] .* offsets) # offsets over which to sweep
 
 x₀s_rotated = [[cos(α+π)*r+0.5*grid_params.xscale,sin(α+π)*r+0.5*grid_params.yscale] for α ∈ αs] # path starting points
-for θ ∈ [8,4]
+for θ ∈ [6,3]
     objects[:n].θ_syn = θ
     objects[:seg1].θ_syn = θ
     objects[:seg2].θ_syn = θ
@@ -244,7 +244,7 @@ xlims!(ax11, -500 * domain[2][1], 500 * domain[2][1])
 ylims!(ax11, -500 * domain[2][2], 500 * domain[2][2])
 ylims!(ax12, -60.5, 0.5)
 
-save(joinpath("figures","place_cells.pdf"), fig)
-save(joinpath("figures","place_cells.svg"), fig)
-save(joinpath("figures","place_cells.png"), fig)
+save(joinpath("examples", "figures","place_cells.pdf"), fig)
+save(joinpath("examples", "figures","place_cells.svg"), fig)
+save(joinpath("examples", "figures","place_cells.png"), fig)
 fig
